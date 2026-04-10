@@ -10,6 +10,7 @@ import { WebSocketServer } from "ws";
 import { BrokerClient, createBrokerServer } from "@/broker";
 import type { Resource } from "@/resources/resource";
 import { SessionPool } from "@/session-pool";
+import { sessionToolSchemas } from "@/session-tools";
 import type { Tool } from "@/tools/tool";
 import { createWebSocketServer } from "@/ws";
 
@@ -68,52 +69,39 @@ export async function createServerWithTools(options: Options): Promise<Server> {
   };
 
   try {
-    sessionPool = new SessionPool();
-    brokerServer = await createBrokerServer({
-      tools,
-      resources,
-      sessionPool,
-    });
-    wss = await createWebSocketServer();
-    wss.on("connection", (websocket, request) => {
-      const requestUrl = new URL(request.url ?? "/", "ws://127.0.0.1");
-      sessionPool?.attachConnection(websocket, {
-        sessionId: requestUrl.searchParams.get("sessionId") ?? undefined,
-        tabId: parseNumber(requestUrl.searchParams.get("tabId")),
-        windowId: parseNumber(requestUrl.searchParams.get("windowId")),
-      });
-    });
-    brokerClient = await BrokerClient.connect();
-  } catch (error) {
-    const errorCode =
-      error && typeof error === "object" && "code" in error
-        ? String(error.code)
-        : undefined;
-
-    await closeWebSocketServer(wss);
-    wss = undefined;
-
-    if (brokerServer) {
-      await closeWebSocketServer(brokerServer);
-      brokerServer = undefined;
-    }
-
-    await sessionPool?.close();
-    sessionPool = undefined;
-
-    if (errorCode !== "EADDRINUSE") {
-      throw error;
-    }
-
     try {
-      brokerClient = await BrokerClient.connect();
-    } catch (brokerError) {
-      throw brokerError;
+      brokerClient = await BrokerClient.connect(1);
+    } catch {
+      brokerClient = undefined;
     }
+
+    if (!brokerClient) {
+      sessionPool = new SessionPool();
+      brokerServer = await createBrokerServer({
+        tools,
+        resources,
+        sessionPool,
+      });
+      wss = await createWebSocketServer();
+      wss.on("connection", (websocket, request) => {
+        const requestUrl = new URL(request.url ?? "/", "ws://127.0.0.1");
+        sessionPool?.attachConnection(websocket, {
+          sessionId: requestUrl.searchParams.get("sessionId") ?? undefined,
+          tabId: parseNumber(requestUrl.searchParams.get("tabId")),
+          windowId: parseNumber(requestUrl.searchParams.get("windowId")),
+        });
+      });
+      brokerClient = await BrokerClient.connect();
+    }
+  } catch (error) {
+    await closeWebSocketServer(wss);
+    await closeWebSocketServer(brokerServer);
+    await sessionPool?.close();
+    throw error;
   }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools: tools.map((tool) => tool.schema) };
+    return { tools: [...sessionToolSchemas, ...tools.map((tool) => tool.schema)] };
   });
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {

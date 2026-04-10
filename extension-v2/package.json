@@ -5,12 +5,16 @@
   "description": "Clean TypeScript rebuild of the BrowseFleetMCP Chrome extension",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test tests/background-service.test.mjs tests/cdp.test.mjs tests/session-controller.test.mjs",
+    "build": "tsc -p tsconfig.json && node scripts/build-content-script.mjs",
+    "test": "npm run build && node --test tests/background-service.test.mjs tests/cdp.test.mjs tests/focus-lock.test.mjs tests/session-controller.test.mjs",
     "test:e2e": "npm run build && node --test tests/e2e-extension.test.mjs",
     "test:full": "npm run test && npm run test:e2e"
   },
   "devDependencies": {
+    "cross-env": "^10.0.0",
+    "esbuild": "^0.25.3",
+    "playwright": "^1.52.0",
+    "ws": "^8.18.1",
     "typescript": "^5.6.2"
   }
 }

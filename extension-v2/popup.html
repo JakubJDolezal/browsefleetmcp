@@ -26,6 +26,29 @@
 
       <section class="panel">
         <div class="panel-header">
+          <h2>Ports</h2>
+          <button id="save-ports" class="secondary" type="button">Save</button>
+        </div>
+        <div class="fields">
+          <label class="field">
+            <span>Primary Port</span>
+            <input id="primary-port" type="number" min="1" max="65535" />
+          </label>
+          <label class="field">
+            <span>Backup Ports</span>
+            <input
+              id="fallback-ports"
+              type="text"
+              inputmode="numeric"
+              placeholder="9152, 9154"
+            />
+          </label>
+        </div>
+        <p class="muted">BrowseFleetMCP tries the primary port first, then the backup ports.</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
           <h2>Connected Sessions</h2>
           <span id="session-count" class="badge">0</span>
         </div>

@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { BackgroundService } from "../dist/background/service.js";
-import { SESSION_STORAGE_KEY } from "../dist/shared/protocol.js";
+import {
+  CONNECTION_SETTINGS_STORAGE_KEY,
+  SESSION_STORAGE_KEY,
+} from "../dist/shared/protocol.js";
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -104,4 +107,25 @@ test("BackgroundService batches repeated record persistence", async () => {
       updatedAt: "2026-04-10T12:00:01.000Z",
     },
   ]);
+});
+
+test("BackgroundService stores normalized connection settings", async () => {
+  const { chrome, setCalls } = createChromeMock();
+  const service = new BackgroundService({
+    chromeApi: chrome,
+  });
+
+  const settings = await service.updateConnectionSettings({
+    primaryPort: 9200,
+    fallbackPorts: [9202, 9200, 9202, 9204],
+  });
+
+  assert.deepEqual(settings, {
+    primaryPort: 9200,
+    fallbackPorts: [9202, 9204],
+  });
+  assert.deepEqual(
+    setCalls[0][CONNECTION_SETTINGS_STORAGE_KEY],
+    settings,
+  );
 });

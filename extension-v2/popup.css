@@ -71,6 +71,32 @@ body {
   margin-top: 10px;
 }
 
+.fields {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+}
+
 .session {
   padding: 10px;
   border: 1px solid var(--line);

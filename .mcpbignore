@@ -1,0 +1,12 @@
+*
+!.github/
+!.github/images/
+!.github/images/browsefleetmcp-mark.png
+!dist/
+!dist/**
+!node_modules/
+!node_modules/**
+!LICENSE
+!README.md
+!manifest.json
+!package.json

@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  server:
+    name: Server (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run typecheck
+
+  extension:
+    name: Extension (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: extension-v2/package-lock.json
+
+      - run: npm ci
+        working-directory: extension-v2
+
+      - run: npm run test
+        working-directory: extension-v2
+
+  extension-e2e:
+    name: Extension E2E (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: extension-v2/package-lock.json
+
+      - run: npm ci
+        working-directory: extension-v2
+
+      - run: npx playwright install chromium
+        working-directory: extension-v2
+
+      - if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+        working-directory: extension-v2
+
+      - if: runner.os != 'Linux'
+        run: npm run test:e2e
+        working-directory: extension-v2

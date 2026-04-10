@@ -63,7 +63,7 @@ export const screenScreenshot: Tool = {
   schema: {
     name: "browser_screen_screenshot",
     description:
-      "Take a PNG screenshot of the current desktop source. Chrome may prompt you to choose a screen, window, or tab.",
+      "Compatibility alias for browser_screenshot. Captures a PNG screenshot of the current rendered browser page only and does not capture anything outside the browser.",
     inputSchema: emptyObjectSchema,
   },
   handle: async (context, _params) => {

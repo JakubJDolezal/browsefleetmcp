@@ -1,55 +1,103 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import { WebSocketServer } from "ws";
 
+import { DEFAULT_WS_PORT } from "../dist/shared/protocol.js";
 import { loadPlaywright } from "./support/playwright-loader.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EXTENSION_ROOT = path.resolve(__dirname, "..");
 const OUTPUT_DIR = path.join(EXTENSION_ROOT, "output", "playwright");
-const CHROME_EXECUTABLE =
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const execFileAsync = promisify(execFile);
 
-async function resolveBrowserExecutable() {
-  const cacheRoot = path.join(os.homedir(), "Library", "Caches", "ms-playwright");
-  let entries;
+async function fileExists(filePath) {
   try {
-    entries = await readdir(cacheRoot, { withFileTypes: true });
+    await access(filePath);
+    return true;
   } catch {
-    entries = [];
+    return false;
+  }
+}
+
+function getPlatformBrowserCandidates() {
+  if (process.platform === "darwin") {
+    return [
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    ];
   }
 
-  const chromiumDirs = entries
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith("chromium-"))
-    .map((entry) => entry.name)
-    .sort()
-    .reverse();
+  if (process.platform === "win32") {
+    return [
+      path.join(
+        process.env.PROGRAMFILES ?? "C:\\Program Files",
+        "Google",
+        "Chrome",
+        "Application",
+        "chrome.exe",
+      ),
+      path.join(
+        process.env["PROGRAMFILES(X86)"] ?? "C:\\Program Files (x86)",
+        "Google",
+        "Chrome",
+        "Application",
+        "chrome.exe",
+      ),
+      path.join(
+        process.env.LOCALAPPDATA ?? "",
+        "Chromium",
+        "Application",
+        "chrome.exe",
+      ),
+    ].filter(Boolean);
+  }
 
-  for (const directory of chromiumDirs) {
-    const chromiumExecutable = path.join(
-      cacheRoot,
-      directory,
-      "chrome-mac",
-      "Chromium.app",
-      "Contents",
-      "MacOS",
-      "Chromium",
-    );
-    try {
-      await access(chromiumExecutable);
-      return chromiumExecutable;
-    } catch {
-      continue;
+  return [
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ];
+}
+
+async function resolveBrowserExecutable(chromium) {
+  const explicitPath = process.env.BROWSEFLEET_CHROME_EXECUTABLE;
+  if (explicitPath) {
+    if (!(await fileExists(explicitPath))) {
+      throw new Error(
+        `BROWSEFLEET_CHROME_EXECUTABLE is set but does not exist: ${explicitPath}`,
+      );
+    }
+    return explicitPath;
+  }
+
+  const bundledExecutable =
+    typeof chromium.executablePath === "function" ? chromium.executablePath() : undefined;
+  if (bundledExecutable && (await fileExists(bundledExecutable))) {
+    return bundledExecutable;
+  }
+
+  for (const candidate of getPlatformBrowserCandidates()) {
+    if (await fileExists(candidate)) {
+      return candidate;
     }
   }
 
-  return CHROME_EXECUTABLE;
+  throw new Error(
+    [
+      "Unable to locate a Chromium executable for the E2E extension test.",
+      "Install Playwright browsers with `npx playwright install chromium`,",
+      "or set BROWSEFLEET_CHROME_EXECUTABLE to a Chrome/Chromium binary.",
+    ].join(" "),
+  );
 }
 
 function createPageOneHtml(origin) {
@@ -192,6 +240,8 @@ async function startHttpServer() {
   return {
     origin: `http://127.0.0.1:${server.address().port}`,
     async close() {
+      server.closeAllConnections?.();
+      server.closeIdleConnections?.();
       await new Promise((resolve, reject) => {
         server.close((error) => {
           if (error) {
@@ -205,8 +255,66 @@ async function startHttpServer() {
   };
 }
 
+async function wait(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function terminateProcessesMatching(pattern) {
+  try {
+    if (process.platform === "win32") {
+      const escapedPattern = pattern.replace(/'/g, "''");
+      await execFileAsync("powershell", [
+        "-NoProfile",
+        "-Command",
+        [
+          "$pattern = '*' + '",
+          escapedPattern,
+          "' + '*'",
+          "Get-CimInstance Win32_Process |",
+          "Where-Object { $_.CommandLine -like $pattern } |",
+          "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+        ].join(" "),
+      ]);
+      return;
+    }
+
+    await execFileAsync("pkill", ["-f", pattern]);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === 1) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function closeContextSafely(context, userDataDir, timeoutMs = 10_000) {
+  if (!context) {
+    return;
+  }
+
+  let timeoutId = 0;
+  const closePromise = context.close();
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error("Timed out closing browser context."));
+    }, timeoutMs);
+  });
+
+  try {
+    await Promise.race([closePromise, timeoutPromise]);
+  } catch {
+    await terminateProcessesMatching(userDataDir);
+    await wait(1_000);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function startSocketServer() {
-  const wss = new WebSocketServer({ host: "127.0.0.1", port: 9009 });
+  const wss = new WebSocketServer({
+    host: "127.0.0.1",
+    port: DEFAULT_WS_PORT,
+  });
   const connectionPromise = new Promise((resolve) => {
     wss.once("connection", (socket, request) => {
       resolve({ socket, request });
@@ -298,6 +406,26 @@ function createSocketClient(socket) {
   };
 }
 
+function waitForSocketClose(socket, timeoutMs = 10_000) {
+  if (socket.readyState === socket.CLOSED) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      socket.off("close", handleClose);
+      reject(new Error("Timed out waiting for the session socket to close."));
+    }, timeoutMs);
+
+    const handleClose = () => {
+      clearTimeout(timeoutId);
+      resolve();
+    };
+
+    socket.once("close", handleClose);
+  });
+}
+
 async function resolveExtensionId(context) {
   let [serviceWorker] = context.serviceWorkers();
   if (!serviceWorker) {
@@ -346,21 +474,21 @@ async function captureFailureArtifacts(page, name) {
 test(
   "extension-v2 E2E smoke test",
   { timeout: 180_000 },
-  async () => {
+  async (t) => {
     const { chromium } = await loadPlaywright();
     const httpServer = await startHttpServer();
     const socketServer = await startSocketServer();
     const userDataDir = await mkdtemp(
       path.join(os.tmpdir(), "browsefleetmcp-extension-e2e-"),
     );
-    const executablePath = await resolveBrowserExecutable();
+    const executablePath = await resolveBrowserExecutable(chromium);
     const launchArgs = [
       `--disable-extensions-except=${EXTENSION_ROOT}`,
       `--load-extension=${EXTENSION_ROOT}`,
-      "--enable-usermedia-screen-capturing",
-      "--allow-http-screen-capture",
-      "--auto-select-desktop-capture-source=Entire screen",
     ];
+    if (process.platform === "linux" && process.env.CI) {
+      launchArgs.push("--no-sandbox", "--disable-dev-shm-usage");
+    }
 
     let context;
     let page;
@@ -508,13 +636,13 @@ test(
       const screenScreenshot = await socketClient.request(
         "browser_screen_screenshot",
         {},
-        20_000,
       );
       assert.ok(
         typeof screenScreenshot === "string" &&
           screenScreenshot.startsWith("iVBOR"),
       );
 
+      const socketClosedPromise = waitForSocketClose(socket);
       await popupPage.bringToFront();
       await popupPage.getByRole("button", { name: "Focus" }).click();
       await popupPage.getByRole("button", { name: "Disconnect" }).click();
@@ -522,7 +650,7 @@ test(
         return document.getElementById("session-count")?.textContent === "0";
       });
 
-      await new Promise((resolve) => socket.once("close", resolve));
+      await socketClosedPromise;
       await popupPage.close();
     } catch (error) {
       if (page) {
@@ -530,7 +658,7 @@ test(
       }
       throw error;
     } finally {
-      await context?.close();
+      await closeContextSafely(context, userDataDir);
       await socketServer.close();
       await httpServer.close();
       await rm(userDataDir, { recursive: true, force: true });

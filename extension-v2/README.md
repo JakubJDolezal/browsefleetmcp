@@ -14,8 +14,8 @@ This extension keeps the same browser tool surface, but changes the runtime mode
 - Each connected tab is moved into its own Chrome window when you connect it.
 - The background worker manages multiple tab sessions at the same time.
 - The MCP server can lease different browser sessions to different agents.
-- Screenshots return full PNG data instead of the shipped bundle's resized preview path.
-- A separate screen-capture path can capture the current desktop source through Chrome's picker.
+- `browser_screenshot` returns the rendered browser page as a full PNG.
+- `browser_snapshot` returns the simplified accessibility view for navigation.
 - Popup state is plain HTML and TypeScript instead of a bundled React app.
 
 ## Protocol Surface
@@ -24,6 +24,7 @@ This extension keeps the same browser tool surface, but changes the runtime mode
 - Socket response envelope type: `messageResponse`.
 - DOM operations still go through a content script.
 - Input automation still uses `chrome.debugger`.
+- Focus-sensitive actions (`browser_click`, `browser_drag`, `browser_hover`, `browser_press_key`, and `browser_type`) are serialized behind one global focus lock and bring the target session window to the front first.
 - Inactive-tab screenshots still fall back to `Page.captureScreenshot`.
 
 ## Build
@@ -34,6 +35,10 @@ npm run build
 ```
 
 Then load `extension-v2/` as an unpacked extension in Chrome.
+
+## Ports
+
+The extension defaults to BrowseFleetMCP on port `9150`, with backup ports `9152` and `9154`. You can change the primary port and backup ports from the popup UI, and the session controller will try each configured port until it finds a running local server.
 
 ## Current scope
 

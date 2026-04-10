@@ -1,10 +1,15 @@
 import type {
+  ConnectionSettings,
   CurrentTabInfo,
   PopupRequest,
   RuntimeResponse,
   SessionRecord,
 } from "../shared/protocol.js";
-import { SESSION_STORAGE_KEY } from "../shared/protocol.js";
+import {
+  CONNECTION_SETTINGS_STORAGE_KEY,
+  SESSION_STORAGE_KEY,
+  normalizeConnectionSettings,
+} from "../shared/protocol.js";
 
 let refreshPromise: Promise<void> | undefined;
 let refreshQueued = false;
@@ -144,14 +149,48 @@ function renderSessions(sessions: SessionRecord[]): void {
   }
 }
 
+function renderConnectionSettings(settings: ConnectionSettings): void {
+  getElement<HTMLInputElement>("primary-port").value = String(
+    settings.primaryPort,
+  );
+  getElement<HTMLInputElement>("fallback-ports").value =
+    settings.fallbackPorts.join(", ");
+}
+
+function parsePortInput(value: string): number {
+  const parsed = Number(value.trim());
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+    throw new Error(`Invalid port: ${value}`);
+  }
+  return parsed;
+}
+
+function readConnectionSettings(): ConnectionSettings {
+  const primaryPort = parsePortInput(
+    getElement<HTMLInputElement>("primary-port").value,
+  );
+  const fallbackPorts = getElement<HTMLInputElement>("fallback-ports")
+    .value
+    .split(",")
+    .map((candidate) => candidate.trim())
+    .filter(Boolean)
+    .map(parsePortInput);
+
+  return normalizeConnectionSettings({ primaryPort, fallbackPorts });
+}
+
 async function runRefresh(): Promise<void> {
   setError(undefined);
-  const [currentTab, sessions] = await Promise.all([
+  const [currentTab, sessions, connectionSettings] = await Promise.all([
     sendPopupRequest<CurrentTabInfo>({ type: "popup/get-current-tab" }),
     sendPopupRequest<SessionRecord[]>({ type: "popup/list-sessions" }),
+    sendPopupRequest<ConnectionSettings>({
+      type: "popup/get-connection-settings",
+    }),
   ]);
   renderCurrentTab(currentTab);
   renderSessions(sessions);
+  renderConnectionSettings(connectionSettings);
 }
 
 async function refresh(): Promise<void> {
@@ -187,6 +226,20 @@ async function connectCurrentTab(): Promise<void> {
   }
 }
 
+async function saveConnectionSettings(): Promise<void> {
+  try {
+    setError(undefined);
+    const settings = readConnectionSettings();
+    await sendPopupRequest<ConnectionSettings>({
+      type: "popup/update-connection-settings",
+      payload: settings,
+    });
+    await refresh();
+  } catch (error) {
+    setError(String(error));
+  }
+}
+
 function wireEvents(): void {
   getElement<HTMLButtonElement>("connect-current").addEventListener(
     "click",
@@ -199,8 +252,16 @@ function wireEvents(): void {
     void refresh();
   });
 
+  getElement<HTMLButtonElement>("save-ports").addEventListener("click", () => {
+    void saveConnectionSettings();
+  });
+
   chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
-    if (areaName === "local" && SESSION_STORAGE_KEY in changes) {
+    if (
+      areaName === "local" &&
+      (SESSION_STORAGE_KEY in changes ||
+        CONNECTION_SETTINGS_STORAGE_KEY in changes)
+    ) {
       void refresh();
     }
   });

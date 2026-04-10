@@ -8,6 +8,13 @@ import { SerialExecutor } from "@/utils/serial";
 export const noAvailableSessionMessage =
   "All connected browser sessions are currently in use. Connect another tab in the BrowseFleetMCP extension or disconnect an existing session.";
 
+export type BrowserSessionSummary = {
+  sessionId: string;
+  tabId?: number;
+  windowId?: number;
+  status: "available" | "current" | "in-use";
+};
+
 type SessionConnectionMetadata = {
   sessionId?: string;
   tabId?: number;
@@ -64,7 +71,7 @@ export class SessionPool {
     executor: SerialExecutor;
     sessionId: string;
   } {
-    const existingLease = this.clientLeases.get(clientId);
+    const existingLease = this.getOpenLease(clientId);
     if (existingLease) {
       const existingSession = this.sessions.get(existingLease);
       if (isOpen(existingSession)) {
@@ -90,6 +97,68 @@ export class SessionPool {
     availableSession.leasedTo = clientId;
     this.clientLeases.set(clientId, availableSession.sessionId);
     return this.createLeaseResult(availableSession);
+  }
+
+  listSessions(clientId: string): BrowserSessionSummary[] {
+    const currentSessionId = this.getOpenLease(clientId);
+
+    return Array.from(this.sessions.values())
+      .filter((session) => isOpen(session))
+      .sort((left, right) => {
+        const leftWindowId = left.windowId ?? Number.MAX_SAFE_INTEGER;
+        const rightWindowId = right.windowId ?? Number.MAX_SAFE_INTEGER;
+        if (leftWindowId !== rightWindowId) {
+          return leftWindowId - rightWindowId;
+        }
+
+        const leftTabId = left.tabId ?? Number.MAX_SAFE_INTEGER;
+        const rightTabId = right.tabId ?? Number.MAX_SAFE_INTEGER;
+        if (leftTabId !== rightTabId) {
+          return leftTabId - rightTabId;
+        }
+
+        return left.sessionId.localeCompare(right.sessionId);
+      })
+      .map((session) => this.createSessionSummary(session, currentSessionId));
+  }
+
+  getCurrentSession(clientId: string): BrowserSessionSummary | undefined {
+    const currentSessionId = this.getOpenLease(clientId);
+    if (!currentSessionId) {
+      return undefined;
+    }
+
+    const session = this.sessions.get(currentSessionId);
+    if (!isOpen(session)) {
+      return undefined;
+    }
+
+    return this.createSessionSummary(session!, currentSessionId);
+  }
+
+  switchClientSession(
+    clientId: string,
+    sessionId: string,
+  ): BrowserSessionSummary {
+    const session = this.sessions.get(sessionId);
+    if (!isOpen(session)) {
+      throw new Error(`Session "${sessionId}" is not currently connected.`);
+    }
+
+    const openSession = session!;
+
+    if (openSession.leasedTo && openSession.leasedTo !== clientId) {
+      throw new Error(`Session "${sessionId}" is already in use by another client.`);
+    }
+
+    const currentSessionId = this.getOpenLease(clientId);
+    if (currentSessionId && currentSessionId !== sessionId) {
+      this.releaseClient(clientId);
+    }
+
+    openSession.leasedTo = clientId;
+    this.clientLeases.set(clientId, sessionId);
+    return this.createSessionSummary(openSession, sessionId);
   }
 
   releaseClient(clientId: string): void {
@@ -150,6 +219,38 @@ export class SessionPool {
       executor: session.executor,
       sessionId: session.sessionId,
     };
+  }
+
+  private createSessionSummary(
+    session: BrowserSession,
+    currentSessionId?: string,
+  ): BrowserSessionSummary {
+    return {
+      sessionId: session.sessionId,
+      tabId: session.tabId,
+      windowId: session.windowId,
+      status:
+        session.sessionId === currentSessionId
+          ? "current"
+          : session.leasedTo
+            ? "in-use"
+            : "available",
+    };
+  }
+
+  private getOpenLease(clientId: string): string | undefined {
+    const existingLease = this.clientLeases.get(clientId);
+    if (!existingLease) {
+      return undefined;
+    }
+
+    const existingSession = this.sessions.get(existingLease);
+    if (isOpen(existingSession)) {
+      return existingLease;
+    }
+
+    this.releaseClient(clientId);
+    return undefined;
   }
 
   private releaseSessionLease(sessionId: string): void {

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "browsefleet": {
+      "command": "node",
+      "args": ["/absolute/path/to/browsermcp/dist/index.js"]
+    }
+  }
+}

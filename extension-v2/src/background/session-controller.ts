@@ -7,7 +7,7 @@ import {
   pressKeyCombo,
   typeText,
 } from "./cdp.js";
-import { captureDesktopScreenshot } from "./desktop-capture.js";
+import { socketRequestRequiresFocus } from "./focus-lock.js";
 import {
   ensureContentScript,
   errorMessage,
@@ -18,20 +18,26 @@ import {
   withPossibleNavigation,
 } from "./runtime.js";
 import {
-  DEFAULT_WS_PORT,
   SOCKET_RESPONSE_TYPE,
+  type ConnectionSettings,
   type ConsoleEntry,
   type SessionRecord,
   type SocketRequestMessage,
   type SocketResponseMessage,
+  getSocketPortCandidates,
   isConnectableUrl,
   nowIso,
 } from "../shared/protocol.js";
 
-type SessionControllerOptions = {
+export type SessionControllerOptions = {
   record: SessionRecord;
+  getConnectionSettings: () => Promise<ConnectionSettings>;
   onUpdate: (record: SessionRecord) => void;
   onDisposed: (sessionId: string) => void;
+  runWithFocusLock?: <T>(
+    record: Pick<SessionRecord, "sessionId" | "tabId" | "windowId">,
+    action: () => Promise<T>,
+  ) => Promise<T>;
 };
 
 export class SessionController {
@@ -85,12 +91,10 @@ export class SessionController {
       lastError: undefined,
     });
 
-    const socketUrl = new URL(`ws://127.0.0.1:${DEFAULT_WS_PORT}`);
-    socketUrl.searchParams.set("sessionId", this.record.sessionId);
-    socketUrl.searchParams.set("tabId", String(this.record.tabId));
-    socketUrl.searchParams.set("windowId", String(this.record.windowId));
-
-    const socket = new WebSocket(socketUrl.toString());
+    const connectionSettings = await this.options.getConnectionSettings();
+    const socket = await this.openSocketWithFallbacks(
+      getSocketPortCandidates(connectionSettings),
+    );
     this.socket = socket;
 
     socket.addEventListener("open", () => {
@@ -107,7 +111,8 @@ export class SessionController {
     socket.addEventListener("error", () => {
       this.updateRecord({
         status: "error",
-        lastError: "Failed to connect to the local BrowseFleetMCP server.",
+        lastError:
+          "Failed to connect to the local BrowseFleetMCP server on the configured ports.",
       });
     });
 
@@ -197,60 +202,131 @@ export class SessionController {
     socket.send(JSON.stringify(response));
   }
 
+  private async openSocketWithFallbacks(ports: number[]): Promise<WebSocket> {
+    let lastError: unknown;
+
+    for (const port of ports) {
+      try {
+        return await this.openSocket(port);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw (
+      lastError ??
+      new Error(
+        `Unable to connect to BrowseFleetMCP on ports ${ports.join(", ")}.`,
+      )
+    );
+  }
+
+  private async openSocket(port: number): Promise<WebSocket> {
+    const socketUrl = new URL(`ws://127.0.0.1:${port}`);
+    socketUrl.searchParams.set("sessionId", this.record.sessionId);
+    socketUrl.searchParams.set("tabId", String(this.record.tabId));
+    socketUrl.searchParams.set("windowId", String(this.record.windowId));
+
+    return await new Promise<WebSocket>((resolve, reject) => {
+      const socket = new WebSocket(socketUrl.toString());
+      const handleOpen = () => {
+        cleanup();
+        resolve(socket);
+      };
+      const handleError = () => {
+        cleanup();
+        try {
+          socket.close();
+        } catch {
+          // Ignore close failures while probing candidate ports.
+        }
+        reject(new Error(`Unable to open BrowseFleetMCP socket on port ${port}.`));
+      };
+      const handleClose = () => {
+        cleanup();
+        reject(new Error(`BrowseFleetMCP socket on port ${port} closed during connect.`));
+      };
+      const cleanup = () => {
+        socket.removeEventListener("open", handleOpen);
+        socket.removeEventListener("error", handleError);
+        socket.removeEventListener("close", handleClose);
+      };
+
+      socket.addEventListener("open", handleOpen);
+      socket.addEventListener("error", handleError);
+      socket.addEventListener("close", handleClose);
+    });
+  }
+
   private async routeSocketRequest(
     type: string,
     payload: any,
   ): Promise<unknown> {
-    switch (type) {
-      case "getTitle":
-        return this.record.title;
-      case "getUrl":
-        return this.record.url;
-      case "browser_navigate":
-        await this.navigate(payload.url);
-        return null;
-      case "browser_go_back":
-        await this.goBack();
-        return null;
-      case "browser_go_forward":
-        await this.goForward();
-        return null;
-      case "browser_wait":
-        await wait(Number(payload.time) * 1_000);
-        return null;
-      case "browser_press_key":
-        await this.pressKey(String(payload.key));
-        return null;
-      case "browser_snapshot":
-        return await this.captureSnapshot();
-      case "browser_click":
-        await this.click(String(payload.ref));
-        return null;
-      case "browser_drag":
-        await this.drag(String(payload.startRef), String(payload.endRef));
-        return null;
-      case "browser_hover":
-        await this.hover(String(payload.ref));
-        return null;
-      case "browser_type":
-        await this.type(
-          String(payload.ref),
-          String(payload.text),
-          Boolean(payload.submit),
-        );
-        return null;
-      case "browser_select_option":
-        await this.selectOption(String(payload.ref), payload.values);
-        return null;
-      case "browser_screenshot":
-        return await captureTabScreenshot(this.record.tabId);
-      case "browser_screen_screenshot":
-        return await captureDesktopScreenshot();
-      case "browser_get_console_logs":
-        return await this.getConsoleLogs();
-      default:
-        throw new Error(`Unsupported socket request type "${type}".`);
+    const action = async (): Promise<unknown> => {
+      switch (type) {
+        case "getTitle":
+          return this.record.title;
+        case "getUrl":
+          return this.record.url;
+        case "browser_navigate":
+          await this.navigate(payload.url);
+          return null;
+        case "browser_go_back":
+          await this.goBack();
+          return null;
+        case "browser_go_forward":
+          await this.goForward();
+          return null;
+        case "browser_wait":
+          await wait(Number(payload.time) * 1_000);
+          return null;
+        case "browser_press_key":
+          await this.pressKey(String(payload.key));
+          return null;
+        case "browser_snapshot":
+          return await this.captureSnapshot();
+        case "browser_click":
+          await this.click(String(payload.ref));
+          return null;
+        case "browser_drag":
+          await this.drag(String(payload.startRef), String(payload.endRef));
+          return null;
+        case "browser_hover":
+          await this.hover(String(payload.ref));
+          return null;
+        case "browser_type":
+          await this.type(
+            String(payload.ref),
+            String(payload.text),
+            Boolean(payload.submit),
+          );
+          return null;
+        case "browser_select_option":
+          await this.selectOption(String(payload.ref), payload.values);
+          return null;
+        case "browser_screenshot":
+          return await captureTabScreenshot(this.record.tabId);
+        case "browser_screen_screenshot":
+          return await captureTabScreenshot(this.record.tabId);
+        case "browser_get_console_logs":
+          return await this.getConsoleLogs();
+        default:
+          throw new Error(`Unsupported socket request type "${type}".`);
+      }
+    };
+
+    if (!socketRequestRequiresFocus(type) || !this.options.runWithFocusLock) {
+      return await action();
     }
+
+    return await this.options.runWithFocusLock(
+      {
+        sessionId: this.record.sessionId,
+        tabId: this.record.tabId,
+        windowId: this.record.windowId,
+      },
+      action,
+    );
   }
 
   private async getTab(): Promise<any> {

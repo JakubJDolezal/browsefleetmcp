@@ -1,6 +1,7 @@
 import {
   isExtensionError,
   type OffscreenRequest,
+  TEST_DESKTOP_CAPTURE_STORAGE_KEY,
 } from "../shared/protocol.js";
 
 const OFFSCREEN_DOCUMENT_PATH = "offscreen.html";
@@ -94,8 +95,19 @@ async function sendOffscreenRequest<T>(message: OffscreenRequest): Promise<T> {
   return response as T;
 }
 
+async function getDesktopCaptureOverride(): Promise<string | undefined> {
+  const stored = await chrome.storage.local.get(TEST_DESKTOP_CAPTURE_STORAGE_KEY);
+  const value = stored[TEST_DESKTOP_CAPTURE_STORAGE_KEY];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
 export async function captureDesktopScreenshot(): Promise<string> {
   return await runCaptureExclusive(async () => {
+    const overrideCapture = await getDesktopCaptureOverride();
+    if (overrideCapture) {
+      return overrideCapture;
+    }
+
     await ensureOffscreenDocument();
 
     try {

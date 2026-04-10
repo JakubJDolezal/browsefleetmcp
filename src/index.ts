@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { program } from "commander";
+import { Command, program } from "commander";
 
 import { appConfig } from "@/config";
 
@@ -66,7 +66,52 @@ async function runServer(): Promise<void> {
   await server.connect(transport);
 }
 
-program
+type PortOptions = {
+  port?: string;
+  fallbackPorts?: string;
+  brokerPort?: string;
+  brokerFallbackPorts?: string;
+  authToken?: string;
+};
+
+function applyPortOptions(options: PortOptions): void {
+  if (options.port) {
+    process.env.BROWSEFLEETMCP_PORT = options.port;
+  }
+  if (options.fallbackPorts) {
+    process.env.BROWSEFLEETMCP_FALLBACK_PORTS = options.fallbackPorts;
+  }
+  if (options.brokerPort) {
+    process.env.BROWSEFLEETMCP_BROKER_PORT = options.brokerPort;
+  }
+  if (options.brokerFallbackPorts) {
+    process.env.BROWSEFLEETMCP_BROKER_FALLBACK_PORTS =
+      options.brokerFallbackPorts;
+  }
+  if (options.authToken) {
+    process.env.BROWSEFLEETMCP_AUTH_TOKEN = options.authToken;
+  }
+}
+
+function withPortOptions(command: Command): Command {
+  return command
+    .option("--port <port>", "Preferred browser WebSocket port")
+    .option(
+      "--fallback-ports <ports>",
+      "Comma-separated backup browser WebSocket ports",
+    )
+    .option("--broker-port <port>", "Preferred internal broker port")
+    .option(
+      "--broker-fallback-ports <ports>",
+      "Comma-separated backup internal broker ports",
+    )
+    .option(
+      "--auth-token <token>",
+      "Optional shared token used to authenticate the extension and broker",
+    );
+}
+
+withPortOptions(program)
   .name(appConfig.name)
   .description(
     `${appConfig.displayName} CLI and stdio MCP server for parallel browser automation.`,
@@ -79,13 +124,21 @@ program
 Examples:
   $ ${appConfig.name}
   $ ${appConfig.name} serve
+  $ ${appConfig.name} --port 9150 --fallback-ports 9152,9154
+  $ ${appConfig.name} --auth-token your-shared-token
 `,
   )
-  .action(runServer);
+  .action(async (options: PortOptions) => {
+    applyPortOptions(options);
+    await runServer();
+  });
 
-program
+withPortOptions(program
   .command("serve")
-  .description(`Start the ${appConfig.displayName} stdio MCP server`)
-  .action(runServer);
+  .description(`Start the ${appConfig.displayName} stdio MCP server`))
+  .action(async (options: PortOptions) => {
+    applyPortOptions(options);
+    await runServer();
+  });
 
 program.parse(process.argv);

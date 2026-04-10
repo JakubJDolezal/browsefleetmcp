@@ -16,37 +16,47 @@ async function fileExists(filePath) {
 }
 
 async function findCachedPlaywrightIndex() {
-  const npxRoot = path.join(os.homedir(), ".npm", "_npx");
-  let entries;
-  try {
-    entries = await readdir(npxRoot, { withFileTypes: true });
-  } catch {
-    return undefined;
-  }
+  const cacheRoots = [
+    process.env.npm_config_cache,
+    path.join(os.homedir(), ".npm"),
+    path.join(os.homedir(), "AppData", "Local", "npm-cache"),
+  ].filter(Boolean);
 
-  const candidates = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
+  for (const cacheRoot of cacheRoots) {
+    const npxRoot = path.join(cacheRoot, "_npx");
+    let entries;
+    try {
+      entries = await readdir(npxRoot, { withFileTypes: true });
+    } catch {
       continue;
     }
 
-    const indexPath = path.join(
-      npxRoot,
-      entry.name,
-      "node_modules",
-      "playwright",
-      "index.mjs",
-    );
-    if (!(await fileExists(indexPath))) {
-      continue;
+    const candidates = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const indexPath = path.join(
+        npxRoot,
+        entry.name,
+        "node_modules",
+        "playwright",
+        "index.mjs",
+      );
+      if (!(await fileExists(indexPath))) {
+        continue;
+      }
+
+      const entryStat = await stat(indexPath);
+      candidates.push({ indexPath, mtimeMs: entryStat.mtimeMs });
     }
 
-    const entryStat = await stat(indexPath);
-    candidates.push({ indexPath, mtimeMs: entryStat.mtimeMs });
+    candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
+    if (candidates[0]?.indexPath) {
+      return candidates[0].indexPath;
+    }
   }
-
-  candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
-  return candidates[0]?.indexPath;
 }
 
 export async function loadPlaywright() {

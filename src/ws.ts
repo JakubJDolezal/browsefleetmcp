@@ -1,12 +1,21 @@
 import { WebSocketServer } from "ws";
 
-import { mcpConfig } from "@/config";
+import { getAuthToken, getWsPortCandidates } from "@/config";
 
-export async function createWebSocketServer(
-  port: number = mcpConfig.defaultWsPort,
+async function listenOnPort(
+  port: number,
+  expectedAuthToken?: string,
 ): Promise<WebSocketServer> {
   return await new Promise((resolve, reject) => {
-    const server = new WebSocketServer({ port });
+    const server = new WebSocketServer({
+      port,
+      verifyClient: expectedAuthToken
+        ? (info) => {
+            const requestUrl = new URL(info.req.url ?? "/", "ws://127.0.0.1");
+            return requestUrl.searchParams.get("authToken") === expectedAuthToken;
+          }
+        : undefined,
+    });
     const onError = (error: Error) => {
       server.off("listening", onListening);
       reject(error);
@@ -19,4 +28,22 @@ export async function createWebSocketServer(
     server.once("error", onError);
     server.once("listening", onListening);
   });
+}
+
+export async function createWebSocketServer(): Promise<WebSocketServer> {
+  let lastError: unknown;
+  const expectedAuthToken = getAuthToken();
+
+  for (const port of getWsPortCandidates()) {
+    try {
+      return await listenOnPort(port, expectedAuthToken);
+    } catch (error) {
+      lastError = error;
+      if (!(error && typeof error === "object" && "code" in error && error.code === "EADDRINUSE")) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError ?? new Error("Unable to bind a BrowseFleetMCP WebSocket server.");
 }

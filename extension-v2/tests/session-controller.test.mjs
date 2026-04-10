@@ -16,6 +16,13 @@ function createBaseRecord() {
   };
 }
 
+function createConnectionSettings() {
+  return {
+    primaryPort: 9150,
+    fallbackPorts: [],
+  };
+}
+
 test("SessionController does not refresh the tab for getTitle", async () => {
   let tabsGetCount = 0;
   globalThis.chrome = {
@@ -29,6 +36,7 @@ test("SessionController does not refresh the tab for getTitle", async () => {
 
   const controller = new SessionController({
     record: createBaseRecord(),
+    getConnectionSettings: async () => createConnectionSettings(),
     onUpdate() {},
     onDisposed() {},
   });
@@ -51,6 +59,7 @@ test("SessionController skips record updates when tab state is unchanged", async
 
   const controller = new SessionController({
     record: createBaseRecord(),
+    getConnectionSettings: async () => createConnectionSettings(),
     onUpdate() {
       updateCount += 1;
     },
@@ -121,6 +130,7 @@ test("SessionController refreshes record state after navigation completes", asyn
 
   const controller = new SessionController({
     record: createBaseRecord(),
+    getConnectionSettings: async () => createConnectionSettings(),
     onUpdate(record) {
       updates.push(record);
     },
@@ -136,5 +146,72 @@ test("SessionController refreshes record state after navigation completes", asyn
   assert.equal(controller.recordSnapshot.title, "After");
   assert.ok(
     updates.some((record) => record.url === "https://after.test"),
+  );
+});
+
+test("SessionController runs focus-sensitive keyboard input through the focus lock", async () => {
+  const navigationListeners = new Set();
+  const debuggerCommands = [];
+  let focusLockCalls = 0;
+
+  globalThis.chrome = {
+    debugger: {
+      async attach() {
+        return null;
+      },
+      async detach() {
+        return null;
+      },
+      async sendCommand(_target, command, params) {
+        debuggerCommands.push({ command, params });
+        return {};
+      },
+    },
+    tabs: {
+      async sendMessage(_tabId, message) {
+        if (message.type === "ping") {
+          return true;
+        }
+        if (message.type === "waitForStableDOM") {
+          return null;
+        }
+        throw new Error(`Unexpected message type ${message.type}`);
+      },
+    },
+    scripting: {
+      async executeScript() {
+        return null;
+      },
+    },
+    webNavigation: {
+      onBeforeNavigate: {
+        addListener(listener) {
+          navigationListeners.add(listener);
+        },
+        removeListener(listener) {
+          navigationListeners.delete(listener);
+        },
+      },
+    },
+  };
+
+  const controller = new SessionController({
+    record: createBaseRecord(),
+    getConnectionSettings: async () => createConnectionSettings(),
+    onUpdate() {},
+    onDisposed() {},
+    runWithFocusLock(_record, action) {
+      focusLockCalls += 1;
+      return action();
+    },
+  });
+
+  await controller.routeSocketRequest("browser_press_key", { key: "Enter" });
+
+  assert.equal(focusLockCalls, 1);
+  assert.ok(
+    debuggerCommands.some(
+      ({ command }) => command === "Input.dispatchKeyEvent",
+    ),
   );
 });

@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BrowseFleetMCP</title>
+    <meta
+      name="description"
+      content="Set up BrowseFleetMCP for Codex, Cursor, Claude, and other stdio MCP clients."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="#top" aria-label="BrowseFleetMCP home">
+          <img src="./assets/fleet-mark.svg" alt="" />
+          <span>BrowseFleetMCP</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#install">Install</a>
+          <a href="#clients">Clients</a>
+          <a href="#pages">GitHub Pages</a>
+          <a href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero" data-reveal>
+          <div class="hero-copy">
+            <div class="hero-topline">
+              <p class="status-pill">Codex · Cursor · Claude · stdio MCP</p>
+              <p class="hero-badge">Uses your real Chrome profile</p>
+            </div>
+
+            <div class="hero-body">
+              <p class="eyebrow">Local browser automation over MCP</p>
+              <h1>One browser stack. Four client paths. No remote browser farm.</h1>
+              <p class="hero-text">
+                BrowseFleetMCP pairs a local stdio MCP server with a Chrome extension so
+                Codex, Cursor, Claude, and other MCP clients can drive your real browser
+                profile with isolated sessions.
+              </p>
+            </div>
+
+            <div class="hero-foot">
+              <div class="hero-actions">
+                <a class="button button-solid" href="#install">Start Setup</a>
+                <a
+                  class="button button-outline"
+                  href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples"
+                  >Open Example Files</a
+                >
+              </div>
+
+              <div class="hero-points" aria-label="Key qualities">
+                <p>Runs locally</p>
+                <p>Leased sessions</p>
+                <p>Standard stdio transport</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-panel">
+            <div class="panel-top">
+              <p class="panel-kicker">Setup in four moves</p>
+              <div class="panel-badges" aria-label="Setup components">
+                <span>Server</span>
+                <span>Extension</span>
+                <span>Client config</span>
+              </div>
+            </div>
+            <ol class="route-list">
+              <li><span>01</span> Build the root MCP server.</li>
+              <li><span>02</span> Build and load the Chrome extension.</li>
+              <li><span>03</span> Add the stdio server to your MCP client.</li>
+              <li><span>04</span> Connect a Chrome tab from the extension popup.</li>
+            </ol>
+            <p class="panel-note">
+              The client config alone is not enough. If no tab is connected, tool calls
+              will fail with <code>No connected tab</code>.
+            </p>
+          </div>
+        </section>
+
+        <section class="signal-strip" data-reveal>
+          <div>
+            <p class="signal-label">What you install</p>
+            <h2>Server, extension, then client config.</h2>
+          </div>
+          <div class="signal-lines">
+            <p><strong>Root package</strong> runs the stdio MCP server.</p>
+            <p><strong>Chrome extension</strong> bridges tabs into leased sessions.</p>
+            <p><strong>Client config</strong> launches the server from Codex, Cursor, Claude, or any stdio-capable MCP host.</p>
+          </div>
+        </section>
+
+        <section class="install" id="install" data-reveal>
+          <div class="section-heading">
+            <p class="eyebrow">Install Flow</p>
+            <h2>Build once, then pick your client.</h2>
+          </div>
+
+          <div class="install-grid">
+            <article class="install-step">
+              <div class="step-number">1</div>
+              <div>
+                <h3>Build the MCP server</h3>
+                <p>Do this at the repo root.</p>
+                <pre><code>npm install
+npm run build</code></pre>
+              </div>
+            </article>
+
+            <article class="install-step">
+              <div class="step-number">2</div>
+              <div>
+                <h3>Build the Chrome extension</h3>
+                <p>Then load <code>extension-v2/</code> in <code>chrome://extensions</code>.</p>
+                <pre><code>cd extension-v2
+npm install
+npm run build</code></pre>
+              </div>
+            </article>
+
+            <article class="install-step">
+              <div class="step-number">3</div>
+              <div>
+                <h3>Add the server to your client</h3>
+                <p>Use the published package or point directly at <code>dist/index.js</code>.</p>
+                <pre><code>{
+  "command": "npx",
+  "args": ["-y", "browsefleetmcp"]
+}</code></pre>
+              </div>
+            </article>
+
+            <article class="install-step">
+              <div class="step-number">4</div>
+              <div>
+                <h3>Connect a tab</h3>
+                <p>Open the extension popup in Chrome and connect the current tab before using browser tools.</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="clients" id="clients" data-reveal>
+          <div class="section-heading">
+            <p class="eyebrow">Client Snippets</p>
+            <h2>Pick the MCP client you actually use.</h2>
+          </div>
+
+          <article class="client-row">
+            <div class="client-meta">
+              <p class="client-name">Codex</p>
+              <p class="client-copy">
+                Codex supports both CLI setup and direct <code>~/.codex/config.toml</code>
+                edits. The same config is shared across the CLI and IDE integration.
+              </p>
+              <a href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/codex">Repo examples</a>
+            </div>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="codex-snippet">Copy</button>
+              <pre id="codex-snippet"><code>codex mcp add browsefleet -- npx -y browsefleetmcp</code></pre>
+            </div>
+          </article>
+
+          <article class="client-row">
+            <div class="client-meta">
+              <p class="client-name">Cursor</p>
+              <p class="client-copy">
+                Put the config in <code>~/.cursor/mcp.json</code>, then restart Cursor.
+              </p>
+              <a href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/cursor">Repo examples</a>
+            </div>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="cursor-snippet">Copy</button>
+              <pre id="cursor-snippet"><code>{
+  "mcpServers": {
+    "browsefleet": {
+      "command": "npx",
+      "args": ["-y", "browsefleetmcp"]
+    }
+  }
+}</code></pre>
+            </div>
+          </article>
+
+          <article class="client-row">
+            <div class="client-meta">
+              <p class="client-name">Claude Code</p>
+              <p class="client-copy">
+                Use the CLI for local or project-scoped setup. If you want the config in
+                version control, add <code>--scope project</code>.
+              </p>
+              <a href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/claude-code">Repo examples</a>
+            </div>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="claude-code-snippet">Copy</button>
+              <pre id="claude-code-snippet"><code>claude mcp add --transport stdio browsefleet -- npx -y browsefleetmcp</code></pre>
+            </div>
+          </article>
+
+          <article class="client-row">
+            <div class="client-meta">
+              <p class="client-name">Claude Desktop</p>
+              <p class="client-copy">
+                Claude Desktop now prefers a local MCP bundle. This repo includes the root
+                <code>manifest.json</code> and <code>.mcpbignore</code> needed to package one.
+              </p>
+              <a href="https://github.com/JakubJDolezal/browsefleetmcp/blob/main/manifest.json">Open manifest</a>
+            </div>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="claude-desktop-snippet">Copy</button>
+              <pre id="claude-desktop-snippet"><code>npm install -g @anthropic-ai/mcpb
+npm run build
+mcpb pack</code></pre>
+            </div>
+          </article>
+
+          <article class="client-row">
+            <div class="client-meta">
+              <p class="client-name">Generic stdio clients</p>
+              <p class="client-copy">
+                Any MCP client that can launch a local command with <code>command</code> and
+                <code>args</code> should work with the same server entrypoint.
+              </p>
+              <a href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/generic">Repo examples</a>
+            </div>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="generic-snippet">Copy</button>
+              <pre id="generic-snippet"><code>{
+  "command": "npx",
+  "args": ["-y", "browsefleetmcp"]
+}</code></pre>
+            </div>
+          </article>
+        </section>
+
+        <section class="detail-band" data-reveal>
+          <div class="detail-copy">
+            <p class="eyebrow">Known gotchas</p>
+            <h2>If tools connect but browser actions fail, it is almost always the extension state.</h2>
+          </div>
+          <div class="detail-list">
+            <p>Build the root server before pointing any client at <code>dist/index.js</code>.</p>
+            <p>Reload the extension after rebuilding <code>extension-v2/</code>.</p>
+            <p>Reconnect a tab from the popup if you hit <code>No connected tab</code>.</p>
+            <p>On native Windows, wrap <code>npx</code> with <code>cmd /c</code> if the client cannot spawn it directly.</p>
+          </div>
+        </section>
+
+        <section class="pages" id="pages" data-reveal>
+          <div class="section-heading">
+            <p class="eyebrow">GitHub Pages</p>
+            <h2>The repo now includes a static site and a Pages workflow.</h2>
+          </div>
+
+          <div class="pages-grid">
+            <div class="pages-copy">
+              <p>
+                The site lives in <code>docs/</code>. The workflow in
+                <code>.github/workflows/pages.yml</code> deploys that folder to GitHub Pages on
+                pushes to <code>main</code>.
+              </p>
+              <p>
+                If Pages is not already enabled for the repo, open GitHub
+                <strong>Settings → Pages</strong> and choose <strong>GitHub Actions</strong> as
+                the source.
+              </p>
+            </div>
+
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="pages-snippet">Copy</button>
+              <pre id="pages-snippet"><code>docs/
+  index.html
+  styles.css
+  app.js
+  assets/fleet-mark.svg
+
+.github/workflows/pages.yml</code></pre>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>BrowseFleetMCP runs locally, uses your Chrome profile, and stays compatible with standard stdio MCP clients.</p>
+      </footer>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

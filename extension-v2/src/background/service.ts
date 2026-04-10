@@ -1,12 +1,19 @@
-import { SessionController } from "./session-controller.js";
+import { FocusLock } from "./focus-lock.js";
+import {
+  SessionController,
+  type SessionControllerOptions,
+} from "./session-controller.js";
 import { errorMessage } from "./runtime.js";
 import {
+  CONNECTION_SETTINGS_STORAGE_KEY,
+  type ConnectionSettings,
   type CurrentTabInfo,
   type PopupRequest,
   type RuntimeResponse,
   type SessionRecord,
   SESSION_STORAGE_KEY,
   isConnectableUrl,
+  normalizeConnectionSettings,
   nowIso,
 } from "../shared/protocol.js";
 
@@ -15,15 +22,16 @@ type SessionControllerLike = Pick<
   "connect" | "disconnect" | "refreshFromTab" | "recordSnapshot"
 >;
 
-type SessionControllerFactory = (options: {
-  record: SessionRecord;
-  onUpdate: (record: SessionRecord) => void;
-  onDisposed: (sessionId: string) => void;
-}) => SessionControllerLike;
+type SessionControllerFactory = (
+  options: SessionControllerOptions,
+) => SessionControllerLike;
+
+type FocusLockLike = Pick<FocusLock, "focus" | "run">;
 
 type BackgroundServiceOptions = {
   chromeApi?: typeof chrome;
   createController?: SessionControllerFactory;
+  focusLock?: FocusLockLike;
   persistDebounceMs?: number;
   setTimer?: (callback: () => void, delayMs: number) => number;
   clearTimer?: (timerId: number) => void;
@@ -32,17 +40,20 @@ type BackgroundServiceOptions = {
 export class BackgroundService {
   private readonly chromeApi: typeof chrome;
   private readonly createController: SessionControllerFactory;
+  private readonly focusLock: FocusLockLike;
   private readonly persistDebounceMs: number;
   private readonly setTimer: (callback: () => void, delayMs: number) => number;
   private readonly clearTimer: (timerId: number) => void;
   private readonly controllers = new Map<string, SessionControllerLike>();
   private readonly records = new Map<string, SessionRecord>();
   private readonly sessionIdByTabId = new Map<number, string>();
+  private connectionSettings?: ConnectionSettings;
   private persistTimer?: number;
   private started = false;
 
   constructor(options: BackgroundServiceOptions = {}) {
     this.chromeApi = options.chromeApi ?? chrome;
+    this.focusLock = options.focusLock ?? new FocusLock(this.chromeApi);
     this.createController =
       options.createController ??
       ((controllerOptions) => new SessionController(controllerOptions));
@@ -97,6 +108,28 @@ export class BackgroundService {
     await this.chromeApi.storage.local.set({
       [SESSION_STORAGE_KEY]: Array.from(this.records.values()),
     });
+  }
+
+  private async getConnectionSettings(): Promise<ConnectionSettings> {
+    if (this.connectionSettings) {
+      return this.connectionSettings;
+    }
+
+    const stored = (await this.chromeApi.storage.local.get(
+      CONNECTION_SETTINGS_STORAGE_KEY,
+    ))[CONNECTION_SETTINGS_STORAGE_KEY] as ConnectionSettings | undefined;
+    this.connectionSettings = normalizeConnectionSettings(stored);
+    return this.connectionSettings;
+  }
+
+  private async updateConnectionSettings(
+    settings: ConnectionSettings,
+  ): Promise<ConnectionSettings> {
+    this.connectionSettings = normalizeConnectionSettings(settings);
+    await this.chromeApi.storage.local.set({
+      [CONNECTION_SETTINGS_STORAGE_KEY]: this.connectionSettings,
+    });
+    return this.connectionSettings;
   }
 
   private schedulePersist(): void {
@@ -190,8 +223,11 @@ export class BackgroundService {
 
     const controller = this.createController({
       record,
+      getConnectionSettings: () => this.getConnectionSettings(),
       onUpdate: this.handleRecordUpdate,
       onDisposed: this.handleDisposed,
+      runWithFocusLock: (focusRecord, action) =>
+        this.focusLock.run(focusRecord, action),
     });
     this.controllers.set(record.sessionId, controller);
     this.records.set(record.sessionId, record);
@@ -221,8 +257,7 @@ export class BackgroundService {
     if (!record) {
       throw new Error("Session not found.");
     }
-    await this.chromeApi.tabs.update(record.tabId, { active: true });
-    await this.chromeApi.windows.update(record.windowId, { focused: true });
+    await this.focusLock.run(record, async () => undefined);
   }
 
   private async restoreSessions(): Promise<void> {
@@ -239,8 +274,11 @@ export class BackgroundService {
 
       const controller = this.createController({
         record,
+        getConnectionSettings: () => this.getConnectionSettings(),
         onUpdate: this.handleRecordUpdate,
         onDisposed: this.handleDisposed,
+        runWithFocusLock: (focusRecord, action) =>
+          this.focusLock.run(focusRecord, action),
       });
       this.controllers.set(record.sessionId, controller);
       this.records.set(record.sessionId, record);
@@ -273,8 +311,14 @@ export class BackgroundService {
               return await this.listSessions();
             case "popup/get-current-tab":
               return await this.getCurrentTabInfo();
+            case "popup/get-connection-settings":
+              return await this.getConnectionSettings();
             case "popup/connect-tab":
               return await this.connectTab(popupMessage.payload.tabId);
+            case "popup/update-connection-settings":
+              return await this.updateConnectionSettings(
+                popupMessage.payload,
+              );
             case "popup/disconnect-session":
               await this.disconnectSession(popupMessage.payload.sessionId);
               return null;

@@ -2,16 +2,14 @@ import { randomUUID } from "node:crypto";
 
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 
-import { mcpConfig } from "@/config";
+import { getAuthToken, getBrokerPortCandidates } from "@/config";
 
 import type { Resource, ResourceResult } from "@/resources/resource";
 import type { Tool, ToolResult } from "@/tools/tool";
+import { handleSessionTool } from "./session-tools";
 import { SessionPool } from "./session-pool";
 
 const brokerHost = "127.0.0.1";
-const brokerPort = Number(
-  process.env.BROWSERMCP_BROKER_PORT ?? mcpConfig.defaultWsPort + 1,
-);
 const brokerReadyMessage = "browsefleetmcp-broker-ready";
 const brokerRetryDelayMs = 100;
 const brokerRetryCount = 20;
@@ -35,7 +33,9 @@ type BrokerRequest =
   | {
       id: string;
       type: "hello";
-      payload?: undefined;
+      payload?: {
+        authToken?: string;
+      };
     };
 
 type BrokerResponse =
@@ -79,16 +79,26 @@ async function handleToolCall(
   name: string,
   params?: Record<string, any>,
 ): Promise<ToolResult> {
-  const { context, executor } = sessionPool.acquire(clientId);
-  const tool = tools.find((tool) => tool.schema.name === name);
-  if (!tool) {
-    return {
-      content: [{ type: "text", text: `Tool "${name}" not found` }],
-      isError: true,
-    };
-  }
-
   try {
+    const sessionToolResult = await handleSessionTool(
+      sessionPool,
+      clientId,
+      name,
+      params,
+    );
+    if (sessionToolResult) {
+      return sessionToolResult;
+    }
+
+    const tool = tools.find((tool) => tool.schema.name === name);
+    if (!tool) {
+      return {
+        content: [{ type: "text", text: `Tool "${name}" not found` }],
+        isError: true,
+      };
+    }
+
+    const { context, executor } = sessionPool.acquire(clientId);
     return await executor.run(() => tool.handle(context, params));
   } catch (error) {
     return {
@@ -123,6 +133,15 @@ function rejectPendingRequests(
   pending.clear();
 }
 
+function isAuthorized(providedToken?: string): boolean {
+  const expectedToken = getAuthToken();
+  if (!expectedToken) {
+    return true;
+  }
+
+  return providedToken?.trim() === expectedToken;
+}
+
 export async function createBrokerServer(options: {
   tools: Tool[];
   resources: Resource[];
@@ -130,83 +149,113 @@ export async function createBrokerServer(options: {
 }): Promise<WebSocketServer> {
   const { tools, resources, sessionPool } = options;
 
-  return await new Promise((resolve, reject) => {
-    const server = new WebSocketServer({ host: brokerHost, port: brokerPort });
-    const onError = (error: Error) => {
-      server.off("listening", onListening);
-      reject(error);
-    };
-    const onListening = () => {
-      server.off("error", onError);
-      resolve(server);
-    };
+  let lastError: unknown;
 
-    server.once("error", onError);
-    server.once("listening", onListening);
+  for (const brokerPort of getBrokerPortCandidates()) {
+    try {
+      return await new Promise((resolve, reject) => {
+        const server = new WebSocketServer({ host: brokerHost, port: brokerPort });
+        const onError = (error: Error) => {
+          server.off("listening", onListening);
+          reject(error);
+        };
+        const onListening = () => {
+          server.off("error", onError);
+          resolve(server);
+        };
 
-    server.on("connection", (socket) => {
-      const clientId = randomUUID();
-      socket.once("close", () => {
-        sessionPool.releaseClient(clientId);
+        server.once("error", onError);
+        server.once("listening", onListening);
+
+        server.on("connection", (socket) => {
+          const clientId = randomUUID();
+          let isAuthenticated = false;
+          socket.once("close", () => {
+            sessionPool.releaseClient(clientId);
+          });
+
+          socket.on("message", (rawMessage) => {
+            void (async () => {
+              let message: BrokerRequest;
+
+              try {
+                message = parseMessage<BrokerRequest>(rawMessage);
+              } catch {
+                socket.close();
+                return;
+              }
+
+              try {
+                if (message.type !== "hello" && !isAuthenticated) {
+                  socket.close();
+                  return;
+                }
+
+                switch (message.type) {
+                  case "hello":
+                    if (!isAuthorized(message.payload?.authToken)) {
+                      sendMessage(socket, {
+                        id: message.id,
+                        ok: false,
+                        error: "Unauthorized BrowseFleetMCP broker connection.",
+                      });
+                      socket.close();
+                      return;
+                    }
+
+                    isAuthenticated = true;
+                    sendMessage(socket, {
+                      id: message.id,
+                      ok: true,
+                      result: brokerReadyMessage,
+                    });
+                    return;
+                  case "callTool":
+                    sendMessage(socket, {
+                      id: message.id,
+                      ok: true,
+                      result: await handleToolCall(
+                        sessionPool,
+                        clientId,
+                        tools,
+                        message.payload.name,
+                        message.payload.arguments,
+                      ),
+                    });
+                    return;
+                  case "readResource":
+                    sendMessage(socket, {
+                      id: message.id,
+                      ok: true,
+                      result: await handleReadResource(
+                        sessionPool,
+                        clientId,
+                        resources,
+                        message.payload.uri,
+                      ),
+                    });
+                    return;
+                }
+              } catch (error) {
+                sendMessage(socket, {
+                  id: message.id,
+                  ok: false,
+                  error: String(error),
+                });
+              }
+            })();
+          });
+        });
       });
+    } catch (error) {
+      lastError = error;
+      if (!(error && typeof error === "object" && "code" in error && error.code === "EADDRINUSE")) {
+        throw error;
+      }
+    }
+  }
 
-      socket.on("message", (rawMessage) => {
-        void (async () => {
-          let message: BrokerRequest;
-
-          try {
-            message = parseMessage<BrokerRequest>(rawMessage);
-          } catch {
-            socket.close();
-            return;
-          }
-
-          try {
-            switch (message.type) {
-              case "hello":
-                sendMessage(socket, {
-                  id: message.id,
-                  ok: true,
-                  result: brokerReadyMessage,
-                });
-                return;
-              case "callTool":
-                sendMessage(socket, {
-                  id: message.id,
-                  ok: true,
-                  result: await handleToolCall(
-                    sessionPool,
-                    clientId,
-                    tools,
-                    message.payload.name,
-                    message.payload.arguments,
-                  ),
-                });
-                return;
-              case "readResource":
-                sendMessage(socket, {
-                  id: message.id,
-                  ok: true,
-                  result: await handleReadResource(
-                    sessionPool,
-                    clientId,
-                    resources,
-                    message.payload.uri,
-                  ),
-                });
-                return;
-            }
-          } catch (error) {
-            sendMessage(socket, {
-              id: message.id,
-              ok: false,
-              error: String(error),
-            });
-          }
-        })();
-      });
-    });
-  });
+  throw lastError ?? new Error("Unable to bind a BrowseFleetMCP broker server.");
 }
 
 export class BrokerClient {
@@ -241,32 +290,35 @@ export class BrokerClient {
     });
   }
 
-  static async connect(): Promise<BrokerClient> {
+  static async connect(retryCount: number = brokerRetryCount): Promise<BrokerClient> {
     let lastError: unknown;
 
-    for (let attempt = 0; attempt < brokerRetryCount; attempt += 1) {
-      try {
-        const client = await new Promise<BrokerClient>((resolve, reject) => {
-          const socket = new WebSocket(
-            `ws://${brokerHost}:${brokerPort}`,
+    for (let attempt = 0; attempt < retryCount; attempt += 1) {
+      for (const brokerPort of getBrokerPortCandidates()) {
+        try {
+          const client = await new Promise<BrokerClient>((resolve, reject) => {
+            const socket = new WebSocket(`ws://${brokerHost}:${brokerPort}`);
+
+            socket.once("open", () => resolve(new BrokerClient(socket)));
+            socket.once("error", reject);
+          });
+
+          const authToken = getAuthToken();
+          const handshake = await client.request<string>(
+            "hello",
+            authToken ? { authToken } : undefined,
           );
+          if (handshake !== brokerReadyMessage) {
+            throw new Error("Connected to an unexpected broker process.");
+          }
 
-          socket.once("open", () => resolve(new BrokerClient(socket)));
-          socket.once("error", reject);
-        });
-
-        const handshake = await client.request<string>("hello");
-        if (handshake !== brokerReadyMessage) {
-          throw new Error("Connected to an unexpected broker process.");
+          return client;
+        } catch (error) {
+          lastError = error;
         }
-
-        return client;
-      } catch (error) {
-        lastError = error;
-        await new Promise((resolve) =>
-          setTimeout(resolve, brokerRetryDelayMs),
-        );
       }
+
+      await new Promise((resolve) => setTimeout(resolve, brokerRetryDelayMs));
     }
 
     throw lastError;

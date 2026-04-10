@@ -34,7 +34,9 @@ export const WaitTool = z.object({
 
 export const PressKeyTool = z.object({
   name: z.literal("browser_press_key"),
-  description: z.literal("Press a keyboard key or key combination."),
+  description: z.literal(
+    "Press a keyboard key or key combination. Requires browser focus and runs behind a global focus lock.",
+  ),
   arguments: z.object({
     key: z.string(),
   }),
@@ -42,13 +44,17 @@ export const PressKeyTool = z.object({
 
 export const SnapshotTool = z.object({
   name: z.literal("browser_snapshot"),
-  description: z.literal("Capture an accessibility snapshot of the current page."),
+  description: z.literal(
+    "Capture a simplified accessibility snapshot of the current page for navigation.",
+  ),
   arguments: emptyArguments,
 });
 
 export const ClickTool = z.object({
   name: z.literal("browser_click"),
-  description: z.literal("Click an element in the current page."),
+  description: z.literal(
+    "Click an element in the current page. Requires browser focus and runs behind a global focus lock.",
+  ),
   arguments: z.object({
     element: z.string(),
     ref: z.string(),
@@ -57,7 +63,9 @@ export const ClickTool = z.object({
 
 export const DragTool = z.object({
   name: z.literal("browser_drag"),
-  description: z.literal("Drag from one element to another."),
+  description: z.literal(
+    "Drag from one element to another. Requires browser focus and runs behind a global focus lock.",
+  ),
   arguments: z.object({
     startElement: z.string(),
     startRef: z.string(),
@@ -68,7 +76,9 @@ export const DragTool = z.object({
 
 export const HoverTool = z.object({
   name: z.literal("browser_hover"),
-  description: z.literal("Hover over an element."),
+  description: z.literal(
+    "Hover over an element. Requires browser focus and runs behind a global focus lock.",
+  ),
   arguments: z.object({
     element: z.string(),
     ref: z.string(),
@@ -77,7 +87,9 @@ export const HoverTool = z.object({
 
 export const TypeTool = z.object({
   name: z.literal("browser_type"),
-  description: z.literal("Type text into an element."),
+  description: z.literal(
+    "Type text into an element. Requires browser focus and runs behind a global focus lock.",
+  ),
   arguments: z.object({
     element: z.string(),
     ref: z.string(),
@@ -104,6 +116,8 @@ export const GetConsoleLogsTool = z.object({
 
 export const ScreenshotTool = z.object({
   name: z.literal("browser_screenshot"),
-  description: z.literal("Capture a PNG screenshot of the current page."),
+  description: z.literal(
+    "Capture a PNG screenshot of the current rendered browser page.",
+  ),
   arguments: emptyArguments,
 });

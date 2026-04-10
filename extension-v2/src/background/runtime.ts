@@ -33,7 +33,7 @@ export async function ensureContentScript(tabId: number): Promise<void> {
   } catch {
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ["dist/content/index.js"],
+      files: ["dist/content-script.js"],
     });
   }
 

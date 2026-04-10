@@ -1,0 +1,3 @@
+[mcp_servers.browsefleet]
+command = "node"
+args = ["/absolute/path/to/browsermcp/dist/index.js"]
