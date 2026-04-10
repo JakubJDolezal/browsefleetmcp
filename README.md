@@ -11,6 +11,8 @@ BrowseFleetMCP is a local browser automation stack made of:
 
 It is designed for parallel browser automation with isolated tab-to-window sessions, so multiple agents can control different browser windows without trampling each other.
 
+Live docs: `https://jakubjdolezal.github.io/browsefleetmcp/`
+
 ## Features
 
 - Fast: automation happens locally on your machine.
@@ -54,7 +56,40 @@ You can also choose your own ports:
 browsefleetmcp --port 9200 --fallback-ports 9202,9204
 ```
 
-The extension popup exposes the same primary-port and backup-port settings, so you can point the extension at a custom local server without rebuilding it.
+If you want to lock the local transport down, start the server with a shared token:
+
+```bash
+browsefleetmcp --auth-token your-shared-token
+```
+
+You can also set `BROWSEFLEETMCP_AUTH_TOKEN` in the environment instead of passing the token on the command line.
+
+The extension popup exposes the same primary-port, backup-port, and auth-token settings, so you can point the extension at a custom local server without rebuilding it.
+
+## CLI
+
+BrowseFleetMCP already ships with a direct command-line interface. You do not need to go through an MCP client just to run the server:
+
+```bash
+browsefleetmcp
+browsefleetmcp serve
+browsefleetmcp --help
+browsefleetmcp --version
+```
+
+Useful direct CLI examples:
+
+```bash
+browsefleetmcp --port 9200 --fallback-ports 9202,9204
+browsefleetmcp --broker-port 9300 --broker-fallback-ports 9302,9304
+browsefleetmcp --auth-token your-shared-token
+```
+
+If you are developing this repo locally, you can also run the built checkout directly:
+
+```bash
+node /absolute/path/to/browsermcp/dist/index.js
+```
 
 ### 3. Add the MCP server to your client
 
@@ -82,11 +117,11 @@ Use the published package if you want the npm release. Use the local checkout if
 
 ### 4. Connect a browser tab
 
-Open any Chrome tab, click the BrowseFleetMCP extension popup, and connect the current tab. Once a tab is connected, MCP clients can call tools such as `browser_snapshot`, `browser_click`, and `browser_screenshot`. `browser_snapshot` is the simplified accessibility/navigation view, while `browser_screenshot` captures the rendered page as it actually looks in the browser.
+Open any Chrome tab, click the BrowseFleetMCP extension popup, confirm the port settings, add the auth token if your server is using one, and connect the current tab. Once a tab is connected, MCP clients can call tools such as `browser_snapshot`, `browser_click`, and `browser_screenshot`. `browser_snapshot` is the simplified accessibility/navigation view, while `browser_screenshot` captures the rendered page as it actually looks in the browser.
 
-If you connect multiple tabs, use `browser_list_sessions` to inspect the available sessions and `browser_switch_session` to move the current MCP client between them.
+If you connect multiple tabs, keep session management separate from browsing actions: use `browser_list_sessions` to inspect the available sessions, `browser_get_current_session` to see which session this MCP client is currently attached to, and `browser_switch_session` to move between them. The browsing and interaction tools no longer auto-pick a session for you. `browser_list_sessions` also reports how many distinct MCP clients touched each session in the last 5 minutes, so you can see which tabs have been active recently.
 
-The input-driven tools `browser_click`, `browser_drag`, `browser_hover`, `browser_press_key`, and `browser_type` require focus. BrowseFleetMCP focuses the target window and serializes those actions behind one global focus lock so separate sessions do not steal focus from each other mid-action.
+The input-driven tools `browser_click`, `browser_drag`, `browser_hover`, `browser_press_key`, `browser_select_option`, and `browser_type` require focus. BrowseFleetMCP focuses the target window and serializes those actions behind one global focus lock so separate sessions do not steal focus from each other mid-action.
 
 ## Copy-ready examples
 
@@ -96,6 +131,7 @@ Ready-to-copy config files now live in [`examples/`](./examples):
 - Cursor: [`examples/cursor/mcp.json`](./examples/cursor/mcp.json)
 - Claude Code: [`examples/claude-code/mcp.json`](./examples/claude-code/mcp.json)
 - Generic stdio clients: [`examples/generic/stdio.json`](./examples/generic/stdio.json)
+- CLI: [`examples/cli/`](./examples/cli)
 
 Each client also has a local-checkout variant that points directly at `dist/index.js` instead of `npx -y browsefleetmcp`.
 
@@ -104,10 +140,18 @@ Each client also has a local-checkout variant that points directly at `dist/inde
 A standalone setup site now lives in [`docs/`](./docs):
 
 - Site entrypoint: [`docs/index.html`](./docs/index.html)
+- Install page: [`docs/install.html`](./docs/install.html)
+- Client config page: [`docs/clients.html`](./docs/clients.html)
+- CLI page: [`docs/cli.html`](./docs/cli.html)
+- Claude Desktop page: [`docs/claude-desktop.html`](./docs/claude-desktop.html)
 - Styles and interactions: [`docs/styles.css`](./docs/styles.css), [`docs/app.js`](./docs/app.js)
+- Social preview assets: [`docs/assets/social-card.svg`](./docs/assets/social-card.svg), [`docs/assets/social-card.png`](./docs/assets/social-card.png)
+- Custom domain template: [`docs/CNAME.example`](./docs/CNAME.example)
 - Pages workflow: [`.github/workflows/pages.yml`](./.github/workflows/pages.yml)
 
 If GitHub Pages is not already enabled for the repo, set the Pages source to `GitHub Actions`.
+
+The default GitHub Pages URL for this repo is `https://jakubjdolezal.github.io/browsefleetmcp/`.
 
 ## Add to Codex
 

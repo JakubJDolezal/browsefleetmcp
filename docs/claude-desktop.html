@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BrowseFleetMCP for Claude Desktop</title>
+    <meta
+      name="description"
+      content="Package BrowseFleetMCP as an MCPB bundle and install it as a Claude Desktop extension."
+    />
+    <meta name="theme-color" content="#142028" />
+    <link
+      rel="canonical"
+      href="https://jakubjdolezal.github.io/browsefleetmcp/claude-desktop.html"
+    />
+    <meta property="og:title" content="BrowseFleetMCP for Claude Desktop" />
+    <meta
+      property="og:description"
+      content="Bundle the repo into an MCPB extension and install it in Claude Desktop."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:url"
+      content="https://jakubjdolezal.github.io/browsefleetmcp/claude-desktop.html"
+    />
+    <meta
+      property="og:image"
+      content="https://jakubjdolezal.github.io/browsefleetmcp/assets/social-card.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BrowseFleetMCP for Claude Desktop" />
+    <meta
+      name="twitter:description"
+      content="Use the MCPB route for Claude Desktop."
+    />
+    <meta
+      name="twitter:image"
+      content="https://jakubjdolezal.github.io/browsefleetmcp/assets/social-card.png"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="./index.html" aria-label="BrowseFleetMCP home">
+          <img src="./assets/fleet-mark.svg" alt="" />
+          <span>BrowseFleetMCP</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary">
+          <a data-nav-link href="./install.html">Install</a>
+          <a data-nav-link href="./clients.html">Clients</a>
+          <a data-nav-link href="./cli.html">CLI</a>
+          <a data-nav-link href="./claude-desktop.html">Claude Desktop</a>
+          <a href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="page-hero" data-reveal>
+          <div class="doc-panel doc-panel-light">
+            <p class="breadcrumbs"><a href="./index.html">Home</a> / Claude Desktop</p>
+            <p class="eyebrow">MCP Bundle</p>
+            <h1>Package BrowseFleetMCP as a Claude Desktop extension.</h1>
+            <p class="hero-text page-text">
+              Claude Desktop prefers a local MCP bundle for local tools. This repo now
+              includes the root <code>manifest.json</code> and <code>.mcpbignore</code>
+              needed to package the current checkout as an MCPB extension.
+            </p>
+          </div>
+
+          <aside class="doc-panel doc-panel-dark">
+            <p class="panel-kicker">Bundle route</p>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="desktop-bundle-snippet">Copy</button>
+              <pre id="desktop-bundle-snippet"><code>npm install -g @anthropic-ai/mcpb
+npm run build
+mcpb pack</code></pre>
+            </div>
+          </aside>
+        </section>
+
+        <section class="doc-grid" data-reveal>
+          <article class="doc-section">
+            <p class="eyebrow">Bundle files</p>
+            <h2>What the repo already includes</h2>
+            <ul class="point-list">
+              <li><code>manifest.json</code> for Claude Desktop / MCPB metadata.</li>
+              <li><code>.mcpbignore</code> to control bundle contents.</li>
+              <li><code>dist/index.js</code> as the packaged Node entrypoint.</li>
+            </ul>
+          </article>
+
+          <article class="doc-section">
+            <p class="eyebrow">Install</p>
+            <h2>How to load it in Claude Desktop</h2>
+            <ol class="ordered-list">
+              <li>Open <strong>Settings → Extensions</strong>.</li>
+              <li>Open <strong>Advanced settings</strong>.</li>
+              <li>Click <strong>Install Extension...</strong>.</li>
+              <li>Select the generated <code>.mcpb</code> file.</li>
+            </ol>
+          </article>
+        </section>
+
+        <section class="doc-section" data-reveal>
+          <p class="eyebrow">Behavior</p>
+          <h2>What this route changes</h2>
+          <div class="option-grid">
+            <div class="option-card">
+              <h3>Desktop-native install</h3>
+              <p>Users install a packaged extension instead of editing config JSON by hand.</p>
+            </div>
+            <div class="option-card">
+              <h3>Same server core</h3>
+              <p>The bundle still launches the same built Node server from <code>dist/index.js</code>.</p>
+            </div>
+            <div class="option-card">
+              <h3>Extension still required</h3>
+              <p>The Chrome extension and connected-tab model do not go away just because Claude Desktop launches the MCP server differently.</p>
+            </div>
+            <div class="option-card">
+              <h3>Versioned package</h3>
+              <p>This gives you a clean artifact to hand to Claude Desktop users or internal teams.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="pager" data-reveal>
+          <a class="pager-link" href="./cli.html">Previous: CLI</a>
+          <a class="pager-link" href="./index.html">Back to Overview</a>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <p>Claude Desktop changes the packaging layer, not the browser-session model. You still need the extension and a connected tab.</p>
+      </footer>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

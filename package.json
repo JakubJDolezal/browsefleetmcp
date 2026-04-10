@@ -4,7 +4,7 @@
   "description": "CLI and MCP server for parallel browser automation with isolated windows and screenshots",
   "author": "Jakub Dolezal",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/JakubJDolezal/browsefleetmcp#readme",
+  "homepage": "https://jakubjdolezal.github.io/browsefleetmcp/",
   "bugs": {
     "url": "https://github.com/JakubJDolezal/browsefleetmcp/issues"
   },

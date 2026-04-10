@@ -1,0 +1,4 @@
+browsefleetmcp
+browsefleetmcp serve
+browsefleetmcp --help
+browsefleetmcp --version

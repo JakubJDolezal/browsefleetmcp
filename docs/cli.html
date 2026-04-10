@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BrowseFleetMCP CLI</title>
+    <meta
+      name="description"
+      content="BrowseFleetMCP CLI usage, commands, flags, ports, broker overrides, auth tokens, and local checkout commands."
+    />
+    <meta name="theme-color" content="#142028" />
+    <link rel="canonical" href="https://jakubjdolezal.github.io/browsefleetmcp/cli.html" />
+    <meta property="og:title" content="BrowseFleetMCP CLI" />
+    <meta
+      property="og:description"
+      content="Run BrowseFleetMCP directly from the shell with ports, broker overrides, auth tokens, and local checkout commands."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jakubjdolezal.github.io/browsefleetmcp/cli.html" />
+    <meta
+      property="og:image"
+      content="https://jakubjdolezal.github.io/browsefleetmcp/assets/social-card.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BrowseFleetMCP CLI" />
+    <meta
+      name="twitter:description"
+      content="Use the BrowseFleetMCP command line interface directly."
+    />
+    <meta
+      name="twitter:image"
+      content="https://jakubjdolezal.github.io/browsefleetmcp/assets/social-card.png"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="./index.html" aria-label="BrowseFleetMCP home">
+          <img src="./assets/fleet-mark.svg" alt="" />
+          <span>BrowseFleetMCP</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary">
+          <a data-nav-link href="./install.html">Install</a>
+          <a data-nav-link href="./clients.html">Clients</a>
+          <a data-nav-link href="./cli.html">CLI</a>
+          <a data-nav-link href="./claude-desktop.html">Claude Desktop</a>
+          <a href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="page-hero" data-reveal>
+          <div class="doc-panel doc-panel-light">
+            <p class="breadcrumbs"><a href="./index.html">Home</a> / CLI</p>
+            <p class="eyebrow">Command Line Interface</p>
+            <h1>BrowseFleetMCP already ships with a direct CLI.</h1>
+            <p class="hero-text page-text">
+              You can run the stdio server directly from the shell, set ports, override
+              broker ports, or add an auth token without going through an MCP client first.
+            </p>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="cli-basic-snippet">Copy</button>
+              <pre id="cli-basic-snippet"><code>browsefleetmcp
+browsefleetmcp serve
+browsefleetmcp --help
+browsefleetmcp --version</code></pre>
+            </div>
+          </div>
+
+          <aside class="doc-panel doc-panel-dark">
+            <p class="panel-kicker">What the CLI is for</p>
+            <ul class="point-list point-list-dark">
+              <li>Run the server outside any MCP client.</li>
+              <li>Choose preferred and fallback ports.</li>
+              <li>Set broker ports separately.</li>
+              <li>Protect the local transport with a shared token.</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="doc-grid" data-reveal>
+          <article class="doc-section">
+            <p class="eyebrow">Direct run</p>
+            <h2>Start the stdio server directly</h2>
+            <p>
+              The bare command and the explicit <code>serve</code> subcommand both start
+              the same stdio MCP server.
+            </p>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="cli-serve-snippet">Copy</button>
+              <pre id="cli-serve-snippet"><code>browsefleetmcp
+browsefleetmcp serve</code></pre>
+            </div>
+          </article>
+
+          <article class="doc-section">
+            <p class="eyebrow">Local checkout</p>
+            <h2>Run the current repo checkout directly</h2>
+            <p>
+              This is the best path when you are actively developing the repo and do not
+              want your client or shell session to pull the published npm package.
+            </p>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="cli-local-snippet">Copy</button>
+              <pre id="cli-local-snippet"><code>npm run build
+node /absolute/path/to/browsermcp/dist/index.js</code></pre>
+            </div>
+          </article>
+        </section>
+
+        <section class="doc-section" data-reveal>
+          <p class="eyebrow">Flags</p>
+          <h2>Supported CLI options</h2>
+          <div class="option-grid">
+            <div class="option-card">
+              <h3><code>--port</code></h3>
+              <p>Preferred browser WebSocket port.</p>
+            </div>
+            <div class="option-card">
+              <h3><code>--fallback-ports</code></h3>
+              <p>Comma-separated backup browser WebSocket ports.</p>
+            </div>
+            <div class="option-card">
+              <h3><code>--broker-port</code></h3>
+              <p>Preferred internal broker port.</p>
+            </div>
+            <div class="option-card">
+              <h3><code>--broker-fallback-ports</code></h3>
+              <p>Comma-separated backup internal broker ports.</p>
+            </div>
+            <div class="option-card">
+              <h3><code>--auth-token</code></h3>
+              <p>Shared token used to authenticate the extension and broker.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-grid" data-reveal>
+          <article class="doc-section">
+            <p class="eyebrow">Ports</p>
+            <h2>Browser and broker overrides</h2>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="cli-ports-snippet">Copy</button>
+              <pre id="cli-ports-snippet"><code>browsefleetmcp --port 9200 --fallback-ports 9202,9204
+
+browsefleetmcp \
+  --broker-port 9300 \
+  --broker-fallback-ports 9302,9304</code></pre>
+            </div>
+          </article>
+
+          <article class="doc-section">
+            <p class="eyebrow">Auth token</p>
+            <h2>Set a shared token from the CLI or the environment</h2>
+            <div class="snippet-block">
+              <button class="copy-button" data-copy-target="cli-auth-snippet">Copy</button>
+              <pre id="cli-auth-snippet"><code>browsefleetmcp --auth-token your-shared-token
+
+BROWSEFLEETMCP_AUTH_TOKEN=your-shared-token browsefleetmcp</code></pre>
+            </div>
+          </article>
+        </section>
+
+        <section class="doc-section" data-reveal>
+          <p class="eyebrow">Inspector</p>
+          <h2>Open the MCP inspector during local development</h2>
+          <p>
+            The repo ships an inspector script in <code>package.json</code> for local debugging.
+          </p>
+          <div class="snippet-block">
+            <button class="copy-button" data-copy-target="cli-inspector-snippet">Copy</button>
+            <pre id="cli-inspector-snippet"><code>npm run inspector</code></pre>
+          </div>
+        </section>
+
+        <div class="pager" data-reveal>
+          <a class="pager-link" href="./clients.html">Previous: Client Configs</a>
+          <a class="pager-link" href="./claude-desktop.html">Next: Claude Desktop</a>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <p>The CLI and the MCP-client launch path use the same server entrypoint. The difference is who starts it.</p>
+      </footer>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

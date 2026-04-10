@@ -1,0 +1,2 @@
+browsefleetmcp --port 9200 --fallback-ports 9202,9204
+browsefleetmcp --broker-port 9300 --broker-fallback-ports 9302,9304

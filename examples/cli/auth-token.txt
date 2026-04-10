@@ -1,0 +1,2 @@
+browsefleetmcp --auth-token your-shared-token
+BROWSEFLEETMCP_AUTH_TOKEN=your-shared-token browsefleetmcp

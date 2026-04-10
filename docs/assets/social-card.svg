@@ -1,0 +1,25 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" rx="40" fill="#F4EFE6"/>
+  <rect x="44" y="44" width="1112" height="542" rx="30" fill="url(#panel)"/>
+  <circle cx="914" cy="172" r="108" stroke="#D8D0C2" stroke-width="2"/>
+  <circle cx="914" cy="172" r="140" stroke="#E8DED0" stroke-width="2"/>
+  <path d="M80 410H1120" stroke="#DCCFC0" stroke-width="2"/>
+  <text x="98" y="118" fill="#157987" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="4">BROWSEFLEETMCP</text>
+  <text x="98" y="226" fill="#182128" font-family="Space Grotesk, Arial, sans-serif" font-size="84" font-weight="700">Local browser</text>
+  <text x="98" y="316" fill="#182128" font-family="Space Grotesk, Arial, sans-serif" font-size="84" font-weight="700">automation over</text>
+  <text x="98" y="406" fill="#182128" font-family="Space Grotesk, Arial, sans-serif" font-size="84" font-weight="700">MCP, clients,</text>
+  <text x="98" y="496" fill="#182128" font-family="Space Grotesk, Arial, sans-serif" font-size="84" font-weight="700">Claude Desktop, CLI.</text>
+  <text x="100" y="548" fill="#4F5C62" font-family="IBM Plex Mono, monospace" font-size="26">Install · Codex · Cursor · Claude Code · MCPB bundle · direct shell usage</text>
+  <rect x="914" y="306" width="170" height="54" rx="27" fill="#142028"/>
+  <text x="956" y="341" fill="#F4EFE6" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">CLI</text>
+  <rect x="894" y="380" width="190" height="54" rx="27" fill="#FFFFFF" fill-opacity="0.78" stroke="#D5C9BB"/>
+  <text x="928" y="415" fill="#142028" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">Codex</text>
+  <rect x="894" y="448" width="190" height="54" rx="27" fill="#FFFFFF" fill-opacity="0.78" stroke="#D5C9BB"/>
+  <text x="927" y="483" fill="#142028" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">Cursor</text>
+  <defs>
+    <linearGradient id="panel" x1="44" y1="44" x2="1156" y2="586" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF9F2"/>
+      <stop offset="1" stop-color="#EFE4D2"/>
+    </linearGradient>
+  </defs>
+</svg>

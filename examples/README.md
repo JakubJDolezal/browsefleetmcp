@@ -9,6 +9,9 @@ Published package examples:
 - `claude-code/mcp.json`
 - `generic/stdio.json`
 - `generic/stdio.windows.json`
+- `cli/basic.txt`
+- `cli/custom-ports.txt`
+- `cli/auth-token.txt`
 
 Local checkout examples:
 
