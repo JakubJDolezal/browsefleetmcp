@@ -1,0 +1,89 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  clickPoint,
+  detachDebugger,
+  dragBetweenPoints,
+} from "../dist/background/cdp.js";
+
+function createChromeMock() {
+  const commands = [];
+  let attachCount = 0;
+  let detachCount = 0;
+  let layoutMetricsCount = 0;
+
+  return {
+    commands,
+    get attachCount() {
+      return attachCount;
+    },
+    get detachCount() {
+      return detachCount;
+    },
+    get layoutMetricsCount() {
+      return layoutMetricsCount;
+    },
+    chrome: {
+      debugger: {
+        async attach() {
+          attachCount += 1;
+        },
+        async detach() {
+          detachCount += 1;
+        },
+        async sendCommand(_target, command, params) {
+          commands.push({ command, params });
+          if (command === "Page.getLayoutMetrics") {
+            layoutMetricsCount += 1;
+            return {
+              cssVisualViewport: {
+                zoom: 2,
+                clientWidth: 800,
+                clientHeight: 600,
+              },
+            };
+          }
+          return {};
+        },
+      },
+    },
+  };
+}
+
+test("clickPoint reuses one debugger attachment and one layout lookup", async () => {
+  const mock = createChromeMock();
+  globalThis.chrome = mock.chrome;
+
+  await clickPoint(11, { x: 10, y: 20 });
+  await detachDebugger(11);
+
+  assert.equal(mock.attachCount, 1);
+  assert.equal(mock.layoutMetricsCount, 1);
+  assert.deepEqual(
+    mock.commands.map(({ command }) => command),
+    [
+      "Page.getLayoutMetrics",
+      "Input.dispatchMouseEvent",
+      "Input.dispatchMouseEvent",
+      "Input.dispatchMouseEvent",
+    ],
+  );
+  assert.equal(mock.detachCount, 1);
+});
+
+test("dragBetweenPoints keeps layout metrics cached for the whole drag", async () => {
+  const mock = createChromeMock();
+  globalThis.chrome = mock.chrome;
+
+  await dragBetweenPoints(12, { x: 0, y: 0 }, { x: 120, y: 60 });
+  await detachDebugger(12);
+
+  assert.equal(mock.attachCount, 1);
+  assert.equal(mock.layoutMetricsCount, 1);
+  assert.equal(
+    mock.commands.filter(({ command }) => command === "Input.dispatchMouseEvent")
+      .length,
+    15,
+  );
+});

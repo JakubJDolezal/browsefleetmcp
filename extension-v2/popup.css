@@ -1,0 +1,152 @@
+:root {
+  color-scheme: light;
+  --bg: #f3f0e8;
+  --panel: #fffdf8;
+  --line: #d8cfbf;
+  --text: #1f1c16;
+  --muted: #6d6659;
+  --accent: #0f6b5c;
+  --accent-strong: #0b5448;
+  --danger: #9a2b2b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 360px;
+  font: 13px/1.4 "SF Mono", "IBM Plex Sans", ui-monospace, monospace;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top right, rgba(15, 107, 92, 0.12), transparent 32%),
+    linear-gradient(180deg, #f8f4eb 0%, var(--bg) 100%);
+}
+
+.app {
+  padding: 14px;
+}
+
+.header,
+.panel-header,
+.session-actions,
+.session-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.header {
+  margin-bottom: 12px;
+}
+
+.header h1,
+.panel h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.header p,
+.panel .muted,
+.session-url {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.panel {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgba(38, 29, 11, 0.06);
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.session {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.session-title {
+  margin: 0;
+  font-size: 13px;
+}
+
+.session-url {
+  word-break: break-all;
+}
+
+.session-meta {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #f4eee1;
+}
+
+.status-connected {
+  color: var(--accent-strong);
+}
+
+.status-connecting {
+  color: #8b5a00;
+}
+
+.status-error,
+.error {
+  color: var(--danger);
+}
+
+.session-meta .muted {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 11px;
+  text-align: right;
+}
+
+button {
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #f6f8f6;
+  padding: 6px 10px;
+  cursor: pointer;
+  font: inherit;
+}
+
+button:hover {
+  background: var(--accent-strong);
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--accent-strong);
+}
+
+button.secondary {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text);
+}
+
+.hidden {
+  display: none;
+}

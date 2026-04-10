@@ -1,0 +1,16 @@
+{
+  "name": "browsefleetmcp-extension",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Clean TypeScript rebuild of the BrowseFleetMCP Chrome extension",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test tests/background-service.test.mjs tests/cdp.test.mjs tests/session-controller.test.mjs",
+    "test:e2e": "npm run build && node --test tests/e2e-extension.test.mjs",
+    "test:full": "npm run test && npm run test:e2e"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  }
+}

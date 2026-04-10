@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BrowseFleetMCP</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div>
+          <h1>BrowseFleetMCP</h1>
+          <p>Parallel browser sessions with one window per connected tab.</p>
+        </div>
+        <button id="refresh" class="ghost" type="button">Refresh</button>
+      </header>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Current Tab</h2>
+          <button id="connect-current" type="button">Split Into Window &amp; Connect</button>
+        </div>
+        <p id="current-tab" class="muted">Loading current tab...</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Connected Sessions</h2>
+          <span id="session-count" class="badge">0</span>
+        </div>
+        <div id="sessions" class="sessions">
+          <p class="muted">No connected sessions.</p>
+        </div>
+      </section>
+
+      <p id="error" class="error hidden"></p>
+    </div>
+    <script type="module" src="dist/popup/index.js"></script>
+  </body>
+</html>
