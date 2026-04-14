@@ -15,6 +15,36 @@ import {
 let refreshPromise: Promise<void> | undefined;
 let refreshQueued = false;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isRuntimeResponseValue<T>(value: unknown): value is RuntimeResponse<T> {
+  if (!isRecord(value) || typeof value.ok !== "boolean") {
+    return false;
+  }
+
+  if (value.ok) {
+    return "data" in value;
+  }
+
+  return typeof value.error === "string";
+}
+
+function isExtensionStatus(value: unknown): value is ExtensionStatus {
+  return (
+    isRecord(value) &&
+    value.connected === true &&
+    typeof value.extensionId === "string" &&
+    typeof value.extensionVersion === "string" &&
+    typeof value.extensionRootUrl === "string" &&
+    typeof value.transportMode === "string" &&
+    typeof value.activeSessionCount === "number" &&
+    typeof value.storedSessionCount === "number" &&
+    Array.isArray(value.warnings)
+  );
+}
+
 function getElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
   if (!element) {
@@ -43,9 +73,12 @@ function setError(message?: string): void {
 }
 
 async function sendPopupRequest<T>(message: PopupRequest): Promise<T> {
-  const response = (await chrome.runtime.sendMessage(
-    message,
-  )) as RuntimeResponse<T>;
+  const response = await chrome.runtime.sendMessage(message);
+  if (!isRuntimeResponseValue<T>(response)) {
+    throw new Error(
+      `Invalid response for ${message.type}. Reload the extension so the popup and background scripts are in sync.`,
+    );
+  }
   if (!response.ok) {
     throw new Error(response.error);
   }
@@ -127,6 +160,35 @@ function renderExtensionStatus(status: ExtensionStatus): void {
     warning.textContent = warningText;
     warnings.appendChild(warning);
   }
+}
+
+function renderExtensionStatusUnavailable(reason?: string): void {
+  const summary = getElement<HTMLDivElement>("health-summary");
+  const warnings = getElement<HTMLDivElement>("health-warnings");
+  summary.innerHTML = "";
+  warnings.innerHTML = "";
+
+  const headline = document.createElement("p");
+  headline.className = "health-line";
+  headline.textContent = "Extension health unavailable.";
+  summary.appendChild(headline);
+
+  const detail = document.createElement("p");
+  detail.className = "health-line";
+  detail.textContent =
+    "Reload the extension so the popup and background scripts are in sync.";
+  summary.appendChild(detail);
+
+  if (!reason) {
+    warnings.classList.add("hidden");
+    return;
+  }
+
+  warnings.classList.remove("hidden");
+  const warning = document.createElement("p");
+  warning.className = "health-warning";
+  warning.textContent = reason;
+  warnings.appendChild(warning);
 }
 
 function renderCurrentTab(currentTab: CurrentTabInfo): void {
@@ -336,9 +398,20 @@ async function runRefresh(): Promise<void> {
   }
 
   if (extensionStatusResult.status === "fulfilled") {
-    renderExtensionStatus(extensionStatusResult.value);
+    if (isExtensionStatus(extensionStatusResult.value)) {
+      renderExtensionStatus(extensionStatusResult.value);
+    } else {
+      renderExtensionStatusUnavailable(
+        "The extension background returned an empty or incompatible health payload.",
+      );
+      refreshErrors.push(
+        "Extension health is unavailable. Reload the extension so the popup and background scripts are in sync.",
+      );
+    }
   } else {
-    refreshErrors.push(formatError(extensionStatusResult.reason));
+    const message = formatError(extensionStatusResult.reason);
+    renderExtensionStatusUnavailable(message);
+    refreshErrors.push(message);
   }
 
   setError(refreshErrors.length > 0 ? refreshErrors.join(" | ") : undefined);
