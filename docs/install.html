@@ -8,7 +8,7 @@
       name="description"
       content="Install BrowseFleetMCP by building the server, loading the Chrome extension, and connecting a tab."
     />
-    <meta name="theme-color" content="#142028" />
+    <meta name="theme-color" content="#081018" />
     <link rel="canonical" href="https://jakubjdolezal.github.io/browsefleetmcp/install.html" />
     <meta property="og:title" content="Install BrowseFleetMCP" />
     <meta
@@ -36,164 +36,260 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" href="data:," />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Space Grotesk", "Avenir Next", "Segoe UI", "sans-serif"],
+              mono: ["IBM Plex Mono", "SFMono-Regular", "monospace"],
+            },
+            colors: {
+              fleet: {
+                bg: "#081018",
+                mist: "#e7e9e4",
+                sand: "#efe3ce",
+                cyan: "#42c5c0",
+                ember: "#db7440",
+              },
+            },
+          },
+        },
+      };
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
-    <div class="page-shell">
-      <header class="site-header">
-        <a class="brand" href="./index.html" aria-label="BrowseFleetMCP home">
-          <img src="./assets/fleet-mark.svg" alt="" />
-          <span>BrowseFleetMCP</span>
-        </a>
-        <nav class="site-nav" aria-label="Primary">
-          <a data-nav-link href="./install.html">Install</a>
-          <a data-nav-link href="./clients.html">Clients</a>
-          <a data-nav-link href="./cli.html">CLI</a>
-          <a data-nav-link href="./claude-desktop.html">Claude Desktop</a>
-          <a href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
-        </nav>
+  <body class="antialiased">
+    <div class="relative overflow-hidden">
+      <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
+            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
+            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          </a>
+          <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
+            <a data-nav-link class="nav-link" href="./index.html">Overview</a>
+            <a data-nav-link class="nav-link" href="./install.html">Install</a>
+            <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
+            <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
+            <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+          </nav>
+        </div>
       </header>
 
-      <main>
-        <section class="page-hero" data-reveal>
-          <div class="doc-panel doc-panel-light">
-            <p class="breadcrumbs"><a href="./index.html">Home</a> / Install</p>
-            <p class="eyebrow">Local Setup</p>
-            <h1>Build the server. Load the extension. Connect the first tab.</h1>
-            <p class="hero-text page-text">
-              The server and extension are both required. Client config is only the launch
-              path. Without a connected tab, the browser tools have nowhere to attach.
-            </p>
-            <div class="hero-actions">
-              <a class="button button-solid" href="./clients.html">Client Configs</a>
-              <a class="button button-outline" href="./cli.html">CLI Flags</a>
+      <main class="pb-14">
+        <section data-reveal class="py-12 sm:py-16">
+          <div class="mx-auto grid max-w-7xl gap-8 px-6 lg:grid-cols-[minmax(0,1.1fr)_24rem] lg:items-end">
+            <div class="surface-panel p-8 sm:p-10">
+              <p class="breadcrumbs"><a href="./index.html">Home</a> / Install</p>
+              <p class="eyebrow">Local setup</p>
+              <h1 class="max-w-4xl text-5xl font-bold leading-none tracking-[-0.07em] text-white sm:text-6xl">
+                Build the server, load the extension, connect the first tab.
+              </h1>
+              <p class="mt-6 max-w-3xl text-lg leading-8 text-white/70">
+                BrowseFleetMCP only works when both sides are present: the local server and
+                the Chrome extension. Client config is just the launcher. The browser side
+                still needs a live tab connection, and the extension currently ships from
+                this repo checkout.
+              </p>
+              <div class="mt-8 flex flex-wrap gap-4">
+                <a
+                  href="./clients.html"
+                  class="inline-flex items-center justify-center rounded-full bg-fleet-cyan px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-slate-950 no-underline transition hover:-translate-y-0.5"
+                >
+                  Client configs
+                </a>
+                <a
+                  href="./cli.html"
+                  class="inline-flex items-center justify-center rounded-full border border-white/14 bg-white/5 px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white no-underline transition hover:-translate-y-0.5"
+                >
+                  CLI flags
+                </a>
+              </div>
             </div>
-          </div>
 
-          <aside class="doc-panel doc-panel-dark">
-            <p class="panel-kicker">Install checklist</p>
-            <ul class="point-list point-list-dark">
-              <li>Build the root package in the repo root.</li>
-              <li>Build <code>extension-v2/</code> and load it in Chrome.</li>
-              <li>Optionally choose ports or an auth token.</li>
-              <li>Connect a tab from the extension popup.</li>
-            </ul>
-          </aside>
+            <aside class="dark-panel p-6 sm:p-8">
+              <p class="soft-label">Install checklist</p>
+              <ul class="mt-5 space-y-4 pl-4 text-sm leading-7 text-white/72">
+                <li>Build <code>extension-v2/</code> and load it in Chrome.</li>
+                <li>Choose either the published package or the local checkout for the server.</li>
+                <li>Choose ports or an auth token only if you need them.</li>
+                <li>Connect a tab from the extension popup before calling tools.</li>
+              </ul>
+            </aside>
+          </div>
         </section>
 
-        <section class="doc-grid" data-reveal>
-          <article class="doc-section">
-            <p class="eyebrow">Step 1</p>
-            <h2>Build the MCP server</h2>
-            <p>
-              Install dependencies and build the CLI plus stdio server bundle from the repo root.
-            </p>
-            <div class="snippet-block">
-              <button class="copy-button" data-copy-target="install-root-snippet">Copy</button>
-              <pre id="install-root-snippet"><code>npm install
-npm run build</code></pre>
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-2">
+            <div class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Step 1</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Build and load the Chrome extension from this checkout.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-white/66">
+                Every install path still depends on the unpacked extension in
+                <code>extension-v2/</code>, even if the server itself is launched later
+                from <code>npx -y browsefleetmcp</code>. After the build, open
+                <code>chrome://extensions</code>, enable Developer mode, click
+                <code>Load unpacked</code>, and select <code>extension-v2/</code>.
+              </p>
             </div>
-          </article>
-
-          <article class="doc-section">
-            <p class="eyebrow">Step 2</p>
-            <h2>Build and load the extension</h2>
-            <p>
-              Build the Chrome extension, then load <code>extension-v2/</code> in
-              <code>chrome://extensions</code> with Developer mode enabled.
-            </p>
-            <div class="snippet-block">
+            <div class="code-window">
               <button class="copy-button" data-copy-target="install-extension-snippet">Copy</button>
-              <pre id="install-extension-snippet"><code>cd extension-v2
+              <pre id="install-extension-snippet"><code>git clone https://github.com/JakubJDolezal/browsefleetmcp.git
+cd browsefleetmcp/extension-v2
 npm install
 npm run build</code></pre>
             </div>
-          </article>
+          </div>
         </section>
 
-        <section class="doc-grid" data-reveal>
-          <article class="doc-section">
-            <p class="eyebrow">Ports</p>
-            <h2>Choose your local ports if needed</h2>
-            <p>
-              By default BrowseFleetMCP prefers browser port <code>9150</code> with
-              fallbacks <code>9152</code> and <code>9154</code>. You can override both browser
-              and broker ports from the CLI.
-            </p>
-            <div class="snippet-block">
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Step 2</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Pick the published package or the current checkout for the server.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-white/66">
+                Use the published package when you want the npm release. Use the local
+                checkout when you are developing this repo or want clients to run your
+                current source tree directly.
+              </p>
+            </div>
+            <div class="grid gap-6">
+              <div class="code-window">
+                <button class="copy-button" data-copy-target="install-package-snippet">Copy</button>
+                <pre id="install-package-snippet"><code>npx -y browsefleetmcp --help</code></pre>
+              </div>
+              <div class="code-window">
+                <button class="copy-button" data-copy-target="install-root-snippet">Copy</button>
+                <pre id="install-root-snippet"><code>cd /absolute/path/to/browsefleetmcp
+npm install
+npm run build
+node /absolute/path/to/browsefleetmcp/dist/index.js --help</code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-8 sm:py-10">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+              <div class="detail-box p-6">
+                <p class="soft-label">Default ports</p>
+                <p class="mt-4 text-xl font-semibold text-white">9150, 9152, 9154</p>
+                <p class="mt-3 text-sm leading-7 text-white/62">
+                  The browser side prefers port <code>9150</code> with two backup ports.
+                </p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">Broker override</p>
+                <p class="mt-4 text-xl font-semibold text-white">Separate internal path</p>
+                <p class="mt-3 text-sm leading-7 text-white/62">
+                  Browser and broker ports can be set independently from the CLI.
+                </p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">Auth token</p>
+                <p class="mt-4 text-xl font-semibold text-white">Optional local lock</p>
+                <p class="mt-3 text-sm leading-7 text-white/62">
+                  Use a shared token if you want the extension and broker to authenticate.
+                </p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">Critical state</p>
+                <p class="mt-4 text-xl font-semibold text-white">Connected current tab</p>
+                <p class="mt-3 text-sm leading-7 text-white/62">
+                  No browser action succeeds until the popup has attached the tab.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-2">
+            <div class="code-window">
               <button class="copy-button" data-copy-target="install-ports-snippet">Copy</button>
               <pre id="install-ports-snippet"><code>browsefleetmcp --port 9200 --fallback-ports 9202,9204
 browsefleetmcp --broker-port 9300 --broker-fallback-ports 9302,9304</code></pre>
             </div>
-          </article>
-
-          <article class="doc-section">
-            <p class="eyebrow">Auth</p>
-            <h2>Lock the local transport down with a shared token</h2>
-            <p>
-              If you set an auth token, enter the same token in the extension popup before
-              connecting a tab.
-            </p>
-            <div class="snippet-block">
+            <div class="code-window">
               <button class="copy-button" data-copy-target="install-auth-snippet">Copy</button>
               <pre id="install-auth-snippet"><code>browsefleetmcp --auth-token your-shared-token
 
 BROWSEFLEETMCP_AUTH_TOKEN=your-shared-token browsefleetmcp</code></pre>
             </div>
-          </article>
+          </div>
         </section>
 
-        <section class="doc-section" data-reveal>
-          <p class="eyebrow">Connect</p>
-          <h2>Connect a tab from the popup</h2>
-          <div class="option-grid">
-            <div class="option-card">
-              <h3>Popup state matters</h3>
-              <p>
-                Confirm the port settings, add the token if you are using one, and connect
-                the current tab. If no tab is connected, browser calls fail with
-                <code>No connected tab</code>.
-              </p>
-            </div>
-            <div class="option-card">
-              <h3>Focus-sensitive actions</h3>
-              <p>
-                <code>browser_click</code>, <code>browser_drag</code>,
-                <code>browser_hover</code>, <code>browser_press_key</code>, and
-                <code>browser_type</code> require focus. BrowseFleetMCP serializes those
-                actions behind a global focus lock.
-              </p>
-            </div>
-            <div class="option-card">
-              <h3>Session inspection</h3>
-              <p>
-                If you connect multiple tabs, use <code>browser_list_sessions</code> and
-                <code>browser_switch_session</code> to move the current MCP client between them.
-              </p>
-            </div>
-            <div class="option-card">
-              <h3>Snapshot versus screenshot</h3>
-              <p>
-                <code>browser_snapshot</code> gives the simplified accessibility/navigation
-                view. <code>browser_screenshot</code> captures the rendered page as it
-                actually looks in the browser.
-              </p>
+        <section data-reveal class="py-10 sm:py-12">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="warm-panel p-8 sm:p-10">
+              <p class="eyebrow !text-[#8d4f2f]">After setup</p>
+              <h2 class="max-w-3xl text-4xl font-bold leading-none tracking-[-0.06em] sm:text-5xl">
+                The popup state matters more than the client you launched from.
+              </h2>
+              <div class="mt-8 grid gap-5 md:grid-cols-2">
+                <div class="rounded-[24px] border border-black/10 bg-black/5 p-5">
+                  <h3 class="text-lg font-semibold">Focus-sensitive actions</h3>
+                  <p class="mt-3 text-sm leading-7 text-black/68">
+                    <code>browser_click</code>, <code>browser_drag</code>,
+                    <code>browser_hover</code>, <code>browser_press_key</code>, and
+                    <code>browser_type</code> require focus. BrowseFleetMCP serializes them
+                    behind a global focus lock.
+                  </p>
+                </div>
+                <div class="rounded-[24px] border border-black/10 bg-black/5 p-5">
+                  <h3 class="text-lg font-semibold">Session inspection</h3>
+                  <p class="mt-3 text-sm leading-7 text-black/68">
+                    If you connect multiple tabs, use <code>browser_list_sessions</code>
+                    and <code>browser_switch_session</code> to control which one the current
+                    MCP client owns.
+                  </p>
+                </div>
+                <div class="rounded-[24px] border border-black/10 bg-black/5 p-5">
+                  <h3 class="text-lg font-semibold">Snapshot vs screenshot</h3>
+                  <p class="mt-3 text-sm leading-7 text-black/68">
+                    <code>browser_snapshot</code> gives the simplified accessibility view.
+                    <code>browser_screenshot</code> captures the rendered page itself.
+                  </p>
+                </div>
+                <div class="rounded-[24px] border border-black/10 bg-black/5 p-5">
+                  <h3 class="text-lg font-semibold">Most likely failure</h3>
+                  <p class="mt-3 text-sm leading-7 text-black/68">
+                    If the extension is loaded but the tab is not connected, browser calls
+                    fail with <code>No connected tab</code>.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <div class="pager" data-reveal>
-          <a class="pager-link" href="./index.html">Overview</a>
-          <a class="pager-link" href="./clients.html">Next: Client Configs</a>
+        <div data-reveal class="mx-auto grid max-w-7xl gap-4 px-6 pt-2 md:grid-cols-2">
+          <a class="pager-link" href="./index.html">Back to overview</a>
+          <a class="pager-link" href="./clients.html">Next: client configs</a>
         </div>
       </main>
 
-      <footer class="site-footer">
-        <p>Build the server first, then the extension, then the client config. That order avoids most setup issues.</p>
+      <footer class="border-t border-white/10">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p class="footer-copy">
+            Build the server first, then the extension, then the client config. That order
+            avoids most setup mistakes.
+          </p>
+          <p class="soft-label">Install page</p>
+        </div>
       </footer>
     </div>
 

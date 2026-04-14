@@ -5,6 +5,7 @@ import {
   clickPoint,
   detachDebugger,
   dragBetweenPoints,
+  typeText,
 } from "../dist/background/cdp.js";
 
 function createChromeMock() {
@@ -72,6 +73,26 @@ test("clickPoint reuses one debugger attachment and one layout lookup", async ()
   assert.equal(mock.detachCount, 1);
 });
 
+test("clickPoint supports human pointer motion", async () => {
+  const mock = createChromeMock();
+  globalThis.chrome = mock.chrome;
+
+  await clickPoint(
+    21,
+    { x: 10, y: 20 },
+    { pointerMode: "human", moveSteps: 4, stepDelayMs: 0 },
+  );
+  await detachDebugger(21);
+
+  assert.equal(mock.attachCount, 1);
+  assert.equal(mock.layoutMetricsCount, 1);
+  assert.equal(
+    mock.commands.filter(({ command }) => command === "Input.dispatchMouseEvent")
+      .length,
+    6,
+  );
+});
+
 test("dragBetweenPoints keeps layout metrics cached for the whole drag", async () => {
   const mock = createChromeMock();
   globalThis.chrome = mock.chrome;
@@ -85,5 +106,34 @@ test("dragBetweenPoints keeps layout metrics cached for the whole drag", async (
     mock.commands.filter(({ command }) => command === "Input.dispatchMouseEvent")
       .length,
     15,
+  );
+});
+
+test("typeText dispatches keyboard events for each character", async () => {
+  const mock = createChromeMock();
+  globalThis.chrome = mock.chrome;
+
+  await typeText(31, "A1-");
+  await detachDebugger(31);
+
+  assert.equal(mock.attachCount, 1);
+  assert.equal(mock.layoutMetricsCount, 0);
+  assert.deepEqual(
+    mock.commands.map(({ command }) => command),
+    [
+      "Input.dispatchKeyEvent",
+      "Input.dispatchKeyEvent",
+      "Input.dispatchKeyEvent",
+      "Input.dispatchKeyEvent",
+      "Input.dispatchKeyEvent",
+      "Input.dispatchKeyEvent",
+      "Input.dispatchKeyEvent",
+      "Input.dispatchKeyEvent",
+      "Input.dispatchKeyEvent",
+    ],
+  );
+  assert.equal(
+    mock.commands.some(({ command }) => command === "Input.insertText"),
+    false,
   );
 });

@@ -8,7 +8,7 @@
       name="description"
       content="Package BrowseFleetMCP as an MCPB bundle and install it as a Claude Desktop extension."
     />
-    <meta name="theme-color" content="#142028" />
+    <meta name="theme-color" content="#081018" />
     <link
       rel="canonical"
       href="https://jakubjdolezal.github.io/browsefleetmcp/claude-desktop.html"
@@ -39,106 +39,196 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" href="data:," />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Space Grotesk", "Avenir Next", "Segoe UI", "sans-serif"],
+              mono: ["IBM Plex Mono", "SFMono-Regular", "monospace"],
+            },
+            colors: {
+              fleet: {
+                bg: "#081018",
+                mist: "#e7e9e4",
+                sand: "#efe3ce",
+                cyan: "#42c5c0",
+                ember: "#db7440",
+              },
+            },
+          },
+        },
+      };
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
-    <div class="page-shell">
-      <header class="site-header">
-        <a class="brand" href="./index.html" aria-label="BrowseFleetMCP home">
-          <img src="./assets/fleet-mark.svg" alt="" />
-          <span>BrowseFleetMCP</span>
-        </a>
-        <nav class="site-nav" aria-label="Primary">
-          <a data-nav-link href="./install.html">Install</a>
-          <a data-nav-link href="./clients.html">Clients</a>
-          <a data-nav-link href="./cli.html">CLI</a>
-          <a data-nav-link href="./claude-desktop.html">Claude Desktop</a>
-          <a href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
-        </nav>
+  <body class="antialiased">
+    <div class="relative overflow-hidden">
+      <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
+            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
+            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          </a>
+          <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
+            <a data-nav-link class="nav-link" href="./index.html">Overview</a>
+            <a data-nav-link class="nav-link" href="./install.html">Install</a>
+            <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
+            <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
+            <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+          </nav>
+        </div>
       </header>
 
-      <main>
-        <section class="page-hero" data-reveal>
-          <div class="doc-panel doc-panel-light">
-            <p class="breadcrumbs"><a href="./index.html">Home</a> / Claude Desktop</p>
-            <p class="eyebrow">MCP Bundle</p>
-            <h1>Package BrowseFleetMCP as a Claude Desktop extension.</h1>
-            <p class="hero-text page-text">
-              Claude Desktop prefers a local MCP bundle for local tools. This repo now
-              includes the root <code>manifest.json</code> and <code>.mcpbignore</code>
-              needed to package the current checkout as an MCPB extension.
-            </p>
-          </div>
+      <main class="pb-14">
+        <section data-reveal class="py-12 sm:py-16">
+          <div class="mx-auto grid max-w-7xl gap-8 px-6 lg:grid-cols-[minmax(0,1.05fr)_25rem] lg:items-end">
+            <div class="surface-panel p-8 sm:p-10">
+              <p class="breadcrumbs"><a href="./index.html">Home</a> / Claude Desktop</p>
+              <p class="eyebrow">MCP bundle path</p>
+              <h1 class="max-w-4xl text-5xl font-bold leading-none tracking-[-0.07em] text-white sm:text-6xl">
+                Package BrowseFleetMCP as a Claude Desktop extension.
+              </h1>
+              <p class="mt-6 max-w-3xl text-lg leading-8 text-white/70">
+                Claude Desktop prefers a local MCP bundle for local tools. This repo
+                already includes the root <code>manifest.json</code> and
+                <code>.mcpbignore</code> needed to package the current checkout.
+              </p>
+            </div>
 
-          <aside class="doc-panel doc-panel-dark">
-            <p class="panel-kicker">Bundle route</p>
-            <div class="snippet-block">
+            <aside class="code-window">
               <button class="copy-button" data-copy-target="desktop-bundle-snippet">Copy</button>
               <pre id="desktop-bundle-snippet"><code>npm install -g @anthropic-ai/mcpb
 npm run build
 mcpb pack</code></pre>
-            </div>
-          </aside>
+            </aside>
+          </div>
         </section>
 
-        <section class="doc-grid" data-reveal>
-          <article class="doc-section">
-            <p class="eyebrow">Bundle files</p>
-            <h2>What the repo already includes</h2>
-            <ul class="point-list">
-              <li><code>manifest.json</code> for Claude Desktop / MCPB metadata.</li>
-              <li><code>.mcpbignore</code> to control bundle contents.</li>
-              <li><code>dist/index.js</code> as the packaged Node entrypoint.</li>
-            </ul>
-          </article>
-
-          <article class="doc-section">
-            <p class="eyebrow">Install</p>
-            <h2>How to load it in Claude Desktop</h2>
-            <ol class="ordered-list">
-              <li>Open <strong>Settings → Extensions</strong>.</li>
-              <li>Open <strong>Advanced settings</strong>.</li>
-              <li>Click <strong>Install Extension...</strong>.</li>
-              <li>Select the generated <code>.mcpb</code> file.</li>
-            </ol>
-          </article>
-        </section>
-
-        <section class="doc-section" data-reveal>
-          <p class="eyebrow">Behavior</p>
-          <h2>What this route changes</h2>
-          <div class="option-grid">
-            <div class="option-card">
-              <h3>Desktop-native install</h3>
-              <p>Users install a packaged extension instead of editing config JSON by hand.</p>
-            </div>
-            <div class="option-card">
-              <h3>Same server core</h3>
-              <p>The bundle still launches the same built Node server from <code>dist/index.js</code>.</p>
-            </div>
-            <div class="option-card">
-              <h3>Extension still required</h3>
-              <p>The Chrome extension and connected-tab model do not go away just because Claude Desktop launches the MCP server differently.</p>
-            </div>
-            <div class="option-card">
-              <h3>Versioned package</h3>
-              <p>This gives you a clean artifact to hand to Claude Desktop users or internal teams.</p>
+        <section data-reveal class="py-8 sm:py-10">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="grid gap-5 md:grid-cols-3">
+              <div class="detail-box p-6">
+                <p class="soft-label">Bundle metadata</p>
+                <p class="mt-4 text-xl font-semibold text-white"><code>manifest.json</code></p>
+                <p class="mt-3 text-sm leading-7 text-white/62">
+                  Claude Desktop bundle metadata lives at the repo root.
+                </p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">Bundle filter</p>
+                <p class="mt-4 text-xl font-semibold text-white"><code>.mcpbignore</code></p>
+                <p class="mt-3 text-sm leading-7 text-white/62">
+                  Controls what goes into the packaged desktop extension.
+                </p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">Runtime</p>
+                <p class="mt-4 text-xl font-semibold text-white"><code>dist/index.js</code></p>
+                <p class="mt-3 text-sm leading-7 text-white/62">
+                  The bundle still launches the same built Node entrypoint.
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
-        <div class="pager" data-reveal>
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 xl:grid-cols-2">
+            <article class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Install in Claude Desktop</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Use the extension flow once the <code>.mcpb</code> file exists.
+              </h2>
+              <ol class="mt-6 list-decimal space-y-3 pl-5 text-base leading-8 text-white/66">
+                <li>Open <strong>Settings → Extensions</strong>.</li>
+                <li>Open <strong>Advanced settings</strong>.</li>
+                <li>Click <strong>Install Extension...</strong>.</li>
+                <li>Select the generated <code>.mcpb</code> file.</li>
+              </ol>
+            </article>
+
+            <article class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">What changes</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Packaging changes. The browser-session model does not.
+              </h2>
+              <div class="mt-6 space-y-4 text-base leading-8 text-white/66">
+                <p>
+                  The bundle route removes the need to hand-edit config JSON for Claude
+                  Desktop users.
+                </p>
+                <p>
+                  It does <strong>not</strong> remove the Chrome extension requirement or
+                  the connected-tab model. The server still needs a live browser tab to
+                  control.
+                </p>
+                <p>
+                  This is best when you want a clean artifact to hand to internal users or
+                  teammates rather than a repo setup guide.
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section data-reveal class="py-10 sm:py-12">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="warm-panel p-8 sm:p-10">
+              <p class="eyebrow !text-[#8d4f2f]">Keep the model straight</p>
+              <h2 class="max-w-3xl text-4xl font-bold leading-none tracking-[-0.06em] sm:text-5xl">
+                Claude Desktop changes how the server is installed, not how the browser attaches.
+              </h2>
+              <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                <div class="rounded-[24px] border border-black/10 bg-black/5 p-5">
+                  <h3 class="text-lg font-semibold">Desktop-native install</h3>
+                  <p class="mt-3 text-sm leading-7 text-black/68">
+                    Users install a packaged extension instead of editing local config files.
+                  </p>
+                </div>
+                <div class="rounded-[24px] border border-black/10 bg-black/5 p-5">
+                  <h3 class="text-lg font-semibold">Same server core</h3>
+                  <p class="mt-3 text-sm leading-7 text-black/68">
+                    The package still runs the same built server from <code>dist/index.js</code>.
+                  </p>
+                </div>
+                <div class="rounded-[24px] border border-black/10 bg-black/5 p-5">
+                  <h3 class="text-lg font-semibold">Extension still required</h3>
+                  <p class="mt-3 text-sm leading-7 text-black/68">
+                    You still need the Chrome extension and a connected current tab.
+                  </p>
+                </div>
+                <div class="rounded-[24px] border border-black/10 bg-black/5 p-5">
+                  <h3 class="text-lg font-semibold">Good for distribution</h3>
+                  <p class="mt-3 text-sm leading-7 text-black/68">
+                    A versioned bundle is easier to hand to teams than ad hoc local config instructions.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div data-reveal class="mx-auto grid max-w-7xl gap-4 px-6 pt-2 md:grid-cols-2">
           <a class="pager-link" href="./cli.html">Previous: CLI</a>
-          <a class="pager-link" href="./index.html">Back to Overview</a>
+          <a class="pager-link" href="./index.html">Back to overview</a>
         </div>
       </main>
 
-      <footer class="site-footer">
-        <p>Claude Desktop changes the packaging layer, not the browser-session model. You still need the extension and a connected tab.</p>
+      <footer class="border-t border-white/10">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p class="footer-copy">
+            Claude Desktop changes the packaging layer, not the browser attachment model.
+          </p>
+          <p class="soft-label">Claude Desktop</p>
+        </div>
       </footer>
     </div>
 

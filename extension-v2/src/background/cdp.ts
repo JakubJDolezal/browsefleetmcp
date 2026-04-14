@@ -1,3 +1,5 @@
+import type { PointerMode } from "../shared/protocol.js";
+
 export type ViewportPoint = {
   x: number;
   y: number;
@@ -13,8 +15,11 @@ type KeyDefinition = {
 
 const DEBUGGER_VERSION = "1.3";
 const DATA_URL_PREFIX = "data:image/png;base64,";
+const DEFAULT_HUMAN_POINTER_STEPS = 12;
+const DEFAULT_HUMAN_POINTER_STEP_DELAY_MS = 8;
 const attachedTabs = new Set<number>();
 const pendingAttachments = new Map<number, Promise<void>>();
+const lastMousePoints = new Map<number, ViewportPoint>();
 
 const SPECIAL_KEYS: Record<string, KeyDefinition> = {
   Alt: { key: "Alt", code: "AltLeft", keyCode: 18 },
@@ -106,6 +111,13 @@ function getKeyDefinition(input: string): KeyDefinition {
   return SPECIAL_KEYS[input] ?? buildCharacterKeyDefinition(input);
 }
 
+async function wait(ms: number): Promise<void> {
+  if (ms <= 0) {
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function sendCommand<T>(
   tabId: number,
   command: string,
@@ -190,6 +202,7 @@ export async function attachDebugger(tabId: number): Promise<void> {
 
 export async function detachDebugger(tabId: number): Promise<void> {
   attachedTabs.delete(tabId);
+  lastMousePoints.delete(tabId);
 
   try {
     await chrome.debugger.detach({ tabId });
@@ -197,7 +210,8 @@ export async function detachDebugger(tabId: number): Promise<void> {
     const message = errorMessage(error);
     if (
       message.includes("Debugger is not attached") ||
-      message.includes("Cannot access a chrome-extension:// URL")
+      message.includes("Cannot access a chrome-extension:// URL") ||
+      message.includes("No tab with given id")
     ) {
       return;
     }
@@ -226,33 +240,124 @@ async function dispatchMouseEvent(
   });
 }
 
+export type PointerMotionOptions = {
+  pointerMode?: PointerMode;
+  moveSteps?: number;
+  stepDelayMs?: number;
+};
+
+function resolvePointerMotionOptions(
+  options?: PointerMotionOptions,
+): Required<PointerMotionOptions> {
+  return {
+    pointerMode: options?.pointerMode ?? "direct",
+    moveSteps: Math.max(1, options?.moveSteps ?? DEFAULT_HUMAN_POINTER_STEPS),
+    stepDelayMs: Math.max(
+      0,
+      options?.stepDelayMs ?? DEFAULT_HUMAN_POINTER_STEP_DELAY_MS,
+    ),
+  };
+}
+
+function getHumanPointerOrigin(point: ViewportPoint): ViewportPoint {
+  return {
+    x: Math.max(point.x - 96, 0),
+    y: Math.max(point.y - 64, 0),
+  };
+}
+
+function interpolatePoint(
+  start: ViewportPoint,
+  end: ViewportPoint,
+  progress: number,
+): ViewportPoint {
+  const easedProgress = 1 - (1 - progress) * (1 - progress);
+  return {
+    x: start.x + (end.x - start.x) * easedProgress,
+    y: start.y + (end.y - start.y) * easedProgress,
+  };
+}
+
+async function movePointerTo(
+  tabId: number,
+  zoom: number,
+  point: ViewportPoint,
+  options?: PointerMotionOptions,
+  buttons = 0,
+): Promise<void> {
+  const motion = resolvePointerMotionOptions(options);
+  if (motion.pointerMode === "direct") {
+    await dispatchMouseEvent(tabId, {
+      type: "mouseMoved",
+      point: await scalePoint(zoom, point),
+      buttons,
+      button: buttons ? "left" : "none",
+    });
+    lastMousePoints.set(tabId, point);
+    return;
+  }
+
+  const start = lastMousePoints.get(tabId) ?? getHumanPointerOrigin(point);
+  for (let step = 1; step <= motion.moveSteps; step += 1) {
+    const nextPoint = interpolatePoint(start, point, step / motion.moveSteps);
+    await dispatchMouseEvent(tabId, {
+      type: "mouseMoved",
+      point: await scalePoint(zoom, nextPoint),
+      buttons,
+      button: buttons ? "left" : "none",
+    });
+    if (step < motion.moveSteps) {
+      await wait(motion.stepDelayMs);
+    }
+  }
+  lastMousePoints.set(tabId, point);
+}
+
+async function dispatchTextCharacter(tabId: number, input: string): Promise<void> {
+  const definition = getKeyDefinition(input);
+  await sendCommand(tabId, "Input.dispatchKeyEvent", {
+    type: "rawKeyDown",
+    key: definition.key,
+    code: definition.code,
+    windowsVirtualKeyCode: definition.keyCode,
+    location: definition.location ?? 0,
+  });
+  await sendCommand(tabId, "Input.dispatchKeyEvent", {
+    type: "char",
+    key: input,
+    code: definition.code,
+    windowsVirtualKeyCode: definition.keyCode,
+    text: input,
+    unmodifiedText: input,
+    location: definition.location ?? 0,
+  });
+  await sendCommand(tabId, "Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: definition.key,
+    code: definition.code,
+    windowsVirtualKeyCode: definition.keyCode,
+    location: definition.location ?? 0,
+  });
+}
+
 export async function moveMouse(
   tabId: number,
   point: ViewportPoint,
   buttons = 0,
+  options?: PointerMotionOptions,
 ): Promise<void> {
   const zoom = await getViewportZoom(tabId);
-  await dispatchMouseEvent(tabId, {
-    type: "mouseMoved",
-    point: await scalePoint(zoom, point),
-    buttons,
-    button: buttons ? "left" : "none",
-  });
+  await movePointerTo(tabId, zoom, point, options, buttons);
 }
 
 export async function clickPoint(
   tabId: number,
   point: ViewportPoint,
+  options?: PointerMotionOptions,
 ): Promise<void> {
   const zoom = await getViewportZoom(tabId);
+  await movePointerTo(tabId, zoom, point, options);
   const scaledPoint = await scalePoint(zoom, point);
-
-  await dispatchMouseEvent(tabId, {
-    type: "mouseMoved",
-    point: scaledPoint,
-    buttons: 0,
-    button: "none",
-  });
   await dispatchMouseEvent(tabId, {
     type: "mousePressed",
     point: scaledPoint,
@@ -273,16 +378,14 @@ export async function dragBetweenPoints(
   tabId: number,
   start: ViewportPoint,
   end: ViewportPoint,
+  options?: PointerMotionOptions,
 ): Promise<void> {
   const zoom = await getViewportZoom(tabId);
   const scaledStart = await scalePoint(zoom, start);
-  const steps = 12;
-  await dispatchMouseEvent(tabId, {
-    type: "mouseMoved",
-    point: scaledStart,
-    buttons: 0,
-    button: "none",
-  });
+  const motion = resolvePointerMotionOptions(options);
+  const dragSteps =
+    motion.pointerMode === "human" ? Math.max(motion.moveSteps, 16) : 12;
+  await movePointerTo(tabId, zoom, start, options);
   await dispatchMouseEvent(tabId, {
     type: "mousePressed",
     point: scaledStart,
@@ -291,17 +394,17 @@ export async function dragBetweenPoints(
     clickCount: 1,
   });
 
-  for (let step = 1; step <= steps; step += 1) {
-    const point = {
-      x: start.x + ((end.x - start.x) * step) / steps,
-      y: start.y + ((end.y - start.y) * step) / steps,
-    };
+  for (let step = 1; step <= dragSteps; step += 1) {
+    const point = interpolatePoint(start, end, step / dragSteps);
     await dispatchMouseEvent(tabId, {
       type: "mouseMoved",
       point: await scalePoint(zoom, point),
       buttons: 1,
       button: "left",
     });
+    if (motion.pointerMode === "human" && step < dragSteps) {
+      await wait(motion.stepDelayMs);
+    }
   }
 
   const scaledEnd = await scalePoint(zoom, end);
@@ -312,10 +415,13 @@ export async function dragBetweenPoints(
     buttons: 0,
     clickCount: 1,
   });
+  lastMousePoints.set(tabId, end);
 }
 
 export async function insertText(tabId: number, text: string): Promise<void> {
-  await sendCommand(tabId, "Input.insertText", { text });
+  for (const character of text) {
+    await dispatchTextCharacter(tabId, character);
+  }
 }
 
 export async function pressKeyCombo(

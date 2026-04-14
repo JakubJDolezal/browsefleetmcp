@@ -10,7 +10,7 @@ async function listenOnPort(
     const server = new WebSocketServer({
       port,
       verifyClient: expectedAuthToken
-        ? (info) => {
+        ? (info: { req: { url?: string | undefined } }) => {
             const requestUrl = new URL(info.req.url ?? "/", "ws://127.0.0.1");
             return requestUrl.searchParams.get("authToken") === expectedAuthToken;
           }

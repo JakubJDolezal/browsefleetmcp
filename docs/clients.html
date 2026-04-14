@@ -8,7 +8,7 @@
       name="description"
       content="Copy-ready BrowseFleetMCP configs for Codex, Cursor, Claude Code, generic stdio MCP clients, and Windows."
     />
-    <meta name="theme-color" content="#142028" />
+    <meta name="theme-color" content="#081018" />
     <link rel="canonical" href="https://jakubjdolezal.github.io/browsefleetmcp/clients.html" />
     <meta property="og:title" content="BrowseFleetMCP Client Configs" />
     <meta
@@ -36,44 +36,75 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" href="data:," />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Space Grotesk", "Avenir Next", "Segoe UI", "sans-serif"],
+              mono: ["IBM Plex Mono", "SFMono-Regular", "monospace"],
+            },
+            colors: {
+              fleet: {
+                bg: "#081018",
+                mist: "#e7e9e4",
+                sand: "#efe3ce",
+                cyan: "#42c5c0",
+                ember: "#db7440",
+              },
+            },
+          },
+        },
+      };
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
-    <div class="page-shell">
-      <header class="site-header">
-        <a class="brand" href="./index.html" aria-label="BrowseFleetMCP home">
-          <img src="./assets/fleet-mark.svg" alt="" />
-          <span>BrowseFleetMCP</span>
-        </a>
-        <nav class="site-nav" aria-label="Primary">
-          <a data-nav-link href="./install.html">Install</a>
-          <a data-nav-link href="./clients.html">Clients</a>
-          <a data-nav-link href="./cli.html">CLI</a>
-          <a data-nav-link href="./claude-desktop.html">Claude Desktop</a>
-          <a href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
-        </nav>
+  <body class="antialiased">
+    <div class="relative overflow-hidden">
+      <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
+            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
+            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          </a>
+          <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
+            <a data-nav-link class="nav-link" href="./index.html">Overview</a>
+            <a data-nav-link class="nav-link" href="./install.html">Install</a>
+            <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
+            <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
+            <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+          </nav>
+        </div>
       </header>
 
-      <main>
-        <section class="page-hero" data-reveal>
-          <div class="doc-panel doc-panel-light">
-            <p class="breadcrumbs"><a href="./index.html">Home</a> / Clients</p>
-            <p class="eyebrow">MCP Clients</p>
-            <h1>Use the same server. Change only the launcher shape.</h1>
-            <p class="hero-text page-text">
-              BrowseFleetMCP is a standard stdio server. The differences between clients
-              are mostly where the config lives and whether the client expects a command
-              line or a config file.
-            </p>
-          </div>
+      <main class="pb-14">
+        <section data-reveal class="py-12 sm:py-16">
+          <div class="mx-auto grid max-w-7xl gap-8 px-6 lg:grid-cols-[minmax(0,1.08fr)_25rem] lg:items-end">
+            <div class="surface-panel p-8 sm:p-10">
+              <p class="breadcrumbs"><a href="./index.html">Home</a> / Clients</p>
+              <p class="eyebrow">MCP launchers</p>
+              <h1 class="max-w-4xl text-5xl font-bold leading-none tracking-[-0.07em] text-white sm:text-6xl">
+                Same server. Different config files, commands, and scopes.
+              </h1>
+              <p class="mt-6 max-w-3xl text-lg leading-8 text-white/70">
+                BrowseFleetMCP is a plain stdio server. Client setup mostly comes down to
+                where the config lives and whether the tool prefers a one-shot CLI command
+                or a checked-in config file.
+              </p>
+              <p class="mt-4 max-w-3xl text-base leading-8 text-white/58">
+                These snippets only cover the server launcher. Every client still depends
+                on the unpacked Chrome extension from <code>extension-v2/</code>.
+              </p>
+            </div>
 
-          <aside class="doc-panel doc-panel-dark">
-            <p class="panel-kicker">Base launch pairs</p>
-            <div class="snippet-block">
+            <aside class="code-window">
               <button class="copy-button" data-copy-target="clients-base-snippet">Copy</button>
               <pre id="clients-base-snippet"><code>{
   "command": "npx",
@@ -82,42 +113,51 @@
 
 {
   "command": "node",
-  "args": ["/absolute/path/to/browsermcp/dist/index.js"]
+  "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
 }</code></pre>
-            </div>
-          </aside>
+            </aside>
+          </div>
         </section>
 
-        <section class="clients" data-reveal>
-          <article class="client-row">
-            <div class="client-meta">
-              <p class="client-name">Codex</p>
-              <p class="client-copy">
-                Codex supports direct CLI setup with <code>codex mcp add</code> and
-                manual edits to <code>~/.codex/config.toml</code>. The same config is
-                shared between the CLI and the IDE integration.
-              </p>
-            </div>
-            <div class="snippet-block">
-              <button class="copy-button" data-copy-target="clients-codex-snippet">Copy</button>
-              <pre id="clients-codex-snippet"><code>codex mcp add browsefleet -- npx -y browsefleetmcp
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="grid gap-6 xl:grid-cols-2">
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div>
+                  <p class="eyebrow">Codex</p>
+                  <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    CLI install or direct <code>config.toml</code>.
+                  </h2>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    Codex supports both <code>codex mcp add</code> and direct edits to
+                    <code>~/.codex/config.toml</code>. The same MCP config is shared
+                    between the CLI and the IDE integration.
+                  </p>
+                </div>
+                <div class="code-window">
+                  <button class="copy-button" data-copy-target="clients-codex-snippet">Copy</button>
+                  <pre id="clients-codex-snippet"><code>codex mcp add browsefleet -- npx -y browsefleetmcp
 
 [mcp_servers.browsefleet]
 command = "npx"
 args = ["-y", "browsefleetmcp"]</code></pre>
-            </div>
-          </article>
+                </div>
+              </article>
 
-          <article class="client-row">
-            <div class="client-meta">
-              <p class="client-name">Cursor</p>
-              <p class="client-copy">
-                Put the server config in <code>~/.cursor/mcp.json</code>, then restart Cursor.
-              </p>
-            </div>
-            <div class="snippet-block">
-              <button class="copy-button" data-copy-target="clients-cursor-snippet">Copy</button>
-              <pre id="clients-cursor-snippet"><code>{
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div>
+                  <p class="eyebrow">Cursor</p>
+                  <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    Drop the launcher into <code>~/.cursor/mcp.json</code>.
+                  </h2>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    Cursor expects the config file directly. Save it, then restart the app
+                    so the MCP server list refreshes.
+                  </p>
+                </div>
+                <div class="code-window">
+                  <button class="copy-button" data-copy-target="clients-cursor-snippet">Copy</button>
+                  <pre id="clients-cursor-snippet"><code>{
   "mcpServers": {
     "browsefleet": {
       "command": "npx",
@@ -125,20 +165,23 @@ args = ["-y", "browsefleetmcp"]</code></pre>
     }
   }
 }</code></pre>
-            </div>
-          </article>
+                </div>
+              </article>
 
-          <article class="client-row">
-            <div class="client-meta">
-              <p class="client-name">Claude Code</p>
-              <p class="client-copy">
-                Use the CLI for local or project-scoped setup. If you want the config
-                checked into the repo, use <code>--scope project</code>.
-              </p>
-            </div>
-            <div class="snippet-block">
-              <button class="copy-button" data-copy-target="clients-claude-code-snippet">Copy</button>
-              <pre id="clients-claude-code-snippet"><code>claude mcp add --transport stdio browsefleet -- npx -y browsefleetmcp
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div>
+                  <p class="eyebrow">Claude Code</p>
+                  <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    CLI setup or project-scoped <code>.mcp.json</code>.
+                  </h2>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    Use the CLI when you want user-level setup. Use
+                    <code>--scope project</code> if the config should live alongside the repo.
+                  </p>
+                </div>
+                <div class="code-window">
+                  <button class="copy-button" data-copy-target="clients-claude-code-snippet">Copy</button>
+                  <pre id="clients-claude-code-snippet"><code>claude mcp add --transport stdio browsefleet -- npx -y browsefleetmcp
 
 {
   "mcpServers": {
@@ -148,70 +191,126 @@ args = ["-y", "browsefleetmcp"]</code></pre>
     }
   }
 }</code></pre>
-            </div>
-          </article>
+                </div>
+              </article>
 
-          <article class="client-row">
-            <div class="client-meta">
-              <p class="client-name">Generic stdio clients</p>
-              <p class="client-copy">
-                Any client that can launch a local command with <code>command</code> and
-                <code>args</code> should work with the same entrypoint.
-              </p>
-            </div>
-            <div class="snippet-block">
-              <button class="copy-button" data-copy-target="clients-generic-snippet">Copy</button>
-              <pre id="clients-generic-snippet"><code>{
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div>
+                  <p class="eyebrow">Generic stdio</p>
+                  <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    Any client that accepts <code>command</code> and <code>args</code>.
+                  </h2>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    If the client can spawn a local process over stdio, BrowseFleetMCP fits
+                    the standard model.
+                  </p>
+                </div>
+                <div class="code-window">
+                  <button class="copy-button" data-copy-target="clients-generic-snippet">Copy</button>
+                  <pre id="clients-generic-snippet"><code>{
   "command": "npx",
   "args": ["-y", "browsefleetmcp"]
 }</code></pre>
+                </div>
+              </article>
             </div>
-          </article>
+          </div>
         </section>
 
-        <section class="doc-section" data-reveal>
-          <p class="eyebrow">Windows note</p>
-          <h2>Wrap <code>npx</code> with <code>cmd /c</code> when native Windows clients cannot spawn it directly</h2>
-          <div class="snippet-block">
-            <button class="copy-button" data-copy-target="clients-windows-snippet">Copy</button>
-            <pre id="clients-windows-snippet"><code>{
+        <section data-reveal class="py-10 sm:py-12">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="warm-panel grid gap-8 p-8 sm:p-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-start">
+              <div>
+                <p class="eyebrow !text-[#8d4f2f]">Windows note</p>
+                <h2 class="text-4xl font-bold leading-none tracking-[-0.06em] sm:text-5xl">
+                  Some Windows-native clients need <code>cmd /c</code> in front of <code>npx</code>.
+                </h2>
+                <p class="mt-5 max-w-xl text-base leading-8 text-black/68">
+                  This only matters when the client cannot directly spawn the package manager
+                  shim. If it can, the normal <code>npx -y browsefleetmcp</code> entrypoint
+                  is still the simplest route.
+                </p>
+              </div>
+
+              <div class="code-window">
+                <button class="copy-button" data-copy-target="clients-windows-snippet">Copy</button>
+                <pre id="clients-windows-snippet"><code>{
   "command": "cmd",
   "args": ["/c", "npx", "-y", "browsefleetmcp"]
 }</code></pre>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section class="doc-section" data-reveal>
-          <p class="eyebrow">Repo examples</p>
-          <h2>Copy from the repo instead of transcribing snippets</h2>
-          <div class="option-grid">
-            <a class="option-card option-link" href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/codex">
-              <h3>Codex</h3>
-              <p><code>examples/codex/</code></p>
-            </a>
-            <a class="option-card option-link" href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/cursor">
-              <h3>Cursor</h3>
-              <p><code>examples/cursor/</code></p>
-            </a>
-            <a class="option-card option-link" href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/claude-code">
-              <h3>Claude Code</h3>
-              <p><code>examples/claude-code/</code></p>
-            </a>
-            <a class="option-card option-link" href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/generic">
-              <h3>Generic stdio</h3>
-              <p><code>examples/generic/</code></p>
-            </a>
+        <section data-reveal class="py-8 sm:py-10">
+          <div class="mx-auto max-w-7xl px-6">
+            <p class="eyebrow">Repo examples</p>
+            <h2 class="max-w-3xl text-4xl font-bold leading-none tracking-[-0.06em] text-white sm:text-5xl">
+              Copy from the repo if you do not want to transcribe snippets by hand.
+            </h2>
+            <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              <a
+                class="route-link p-6 no-underline"
+                href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/codex"
+              >
+                <p class="soft-label">Codex</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">examples/codex/</h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  Config examples for direct Codex setup.
+                </p>
+              </a>
+              <a
+                class="route-link p-6 no-underline"
+                href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/cursor"
+              >
+                <p class="soft-label">Cursor</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">examples/cursor/</h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  Ready-to-copy MCP JSON for Cursor.
+                </p>
+              </a>
+              <a
+                class="route-link p-6 no-underline"
+                href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/claude-code"
+              >
+                <p class="soft-label">Claude Code</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  examples/claude-code/
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  CLI and project-scoped examples for Claude Code.
+                </p>
+              </a>
+              <a
+                class="route-link p-6 no-underline"
+                href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/generic"
+              >
+                <p class="soft-label">Generic stdio</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  examples/generic/
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  Generic command-plus-args shapes for other MCP hosts.
+                </p>
+              </a>
+            </div>
           </div>
         </section>
 
-        <div class="pager" data-reveal>
-          <a class="pager-link" href="./install.html">Previous: Install</a>
+        <div data-reveal class="mx-auto grid max-w-7xl gap-4 px-6 pt-2 md:grid-cols-2">
+          <a class="pager-link" href="./install.html">Previous: install</a>
           <a class="pager-link" href="./cli.html">Next: CLI</a>
         </div>
       </main>
 
-      <footer class="site-footer">
-        <p>The same server can be launched either from an MCP client or directly from the shell. The launcher changes; the server does not.</p>
+      <footer class="border-t border-white/10">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p class="footer-copy">
+            The launcher changes from client to client. The server entrypoint does not.
+          </p>
+          <p class="soft-label">Client configs</p>
+        </div>
       </footer>
     </div>
 

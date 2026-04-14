@@ -27,24 +27,39 @@ The MCP server is a local stdio process that your client starts on demand. The C
 
 Important: client setup is only half of the installation. You also need to load the Chrome extension and connect a tab from the extension popup, otherwise browser tool calls will fail with `No connected tab`.
 
+Important: even if you launch the server from `npx -y browsefleetmcp`, you still need a checkout of this repo because the unpacked Chrome extension currently lives in [`extension-v2/`](./extension-v2).
+
 ## Quick start
 
-### 1. Build the MCP server
+### 1. Clone the repo and build the Chrome extension
 
 ```bash
-npm install
-npm run build
-```
-
-### 2. Build the Chrome extension
-
-```bash
-cd extension-v2
+git clone https://github.com/JakubJDolezal/browsefleetmcp.git
+cd browsefleetmcp/extension-v2
 npm install
 npm run build
 ```
 
 Then open `chrome://extensions`, enable Developer mode, click `Load unpacked`, and select [`extension-v2/`](./extension-v2).
+
+### 2. Choose how you want to run the server
+
+Recommended for normal use:
+
+```bash
+npx -y browsefleetmcp --help
+```
+
+Recommended while developing this repo:
+
+```bash
+cd /absolute/path/to/browsefleetmcp
+npm install
+npm run build
+node /absolute/path/to/browsefleetmcp/dist/index.js --help
+```
+
+Use `npx -y browsefleetmcp` when you want the npm release. Use the local checkout when you want your MCP client or shell to run the code from this repo directly.
 
 ### Port defaults and fallbacks
 
@@ -83,12 +98,19 @@ Useful direct CLI examples:
 browsefleetmcp --port 9200 --fallback-ports 9202,9204
 browsefleetmcp --broker-port 9300 --broker-fallback-ports 9302,9304
 browsefleetmcp --auth-token your-shared-token
+browsefleetmcp create-session --url https://example.com
+browsefleetmcp reload-extension
+browsefleetmcp restart-transport
 ```
+
+`browsefleetmcp create-session` requires a running BrowseFleetMCP server process first, either from `browsefleetmcp serve` or from an MCP client that already launched the server.
+
+`browsefleetmcp reload-extension` asks the unpacked extension to reload itself after you rebuild it. `browsefleetmcp restart-transport` restarts the broker plus browser WebSocket stack without killing your CLI or MCP client process.
 
 If you are developing this repo locally, you can also run the built checkout directly:
 
 ```bash
-node /absolute/path/to/browsermcp/dist/index.js
+node /absolute/path/to/browsefleetmcp/dist/index.js
 ```
 
 ### 3. Add the MCP server to your client
@@ -109,7 +131,7 @@ Choose one of these launch modes:
 ```json
 {
   "command": "node",
-  "args": ["/absolute/path/to/browsermcp/dist/index.js"]
+  "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
 }
 ```
 
@@ -118,6 +140,10 @@ Use the published package if you want the npm release. Use the local checkout if
 ### 4. Connect a browser tab
 
 Open any Chrome tab, click the BrowseFleetMCP extension popup, confirm the port settings, add the auth token if your server is using one, and connect the current tab. Once a tab is connected, MCP clients can call tools such as `browser_snapshot`, `browser_click`, and `browser_screenshot`. `browser_snapshot` is the simplified accessibility/navigation view, while `browser_screenshot` captures the rendered page as it actually looks in the browser.
+
+If you do not want to connect a tab manually, the MCP tool `browser_create_session` and the CLI command `browsefleetmcp create-session --url <url>` can ask the extension to open and connect a fresh isolated session for you.
+
+Operational controls are available from both surfaces too: `browser_reload_extension` / `browsefleetmcp reload-extension` reload the extension, and `browser_restart_transport` / `browsefleetmcp restart-transport` restart the broker and browser transport stack.
 
 If you connect multiple tabs, keep session management separate from browsing actions: use `browser_list_sessions` to inspect the available sessions, `browser_get_current_session` to see which session this MCP client is currently attached to, and `browser_switch_session` to move between them. The browsing and interaction tools no longer auto-pick a session for you. `browser_list_sessions` also reports how many distinct MCP clients touched each session in the last 5 minutes, so you can see which tabs have been active recently.
 
@@ -168,7 +194,7 @@ codex mcp add browsefleet -- npx -y browsefleetmcp
 Current local checkout:
 
 ```bash
-codex mcp add browsefleet -- node /absolute/path/to/browsermcp/dist/index.js
+codex mcp add browsefleet -- node /absolute/path/to/browsefleetmcp/dist/index.js
 ```
 
 Verify:
@@ -192,7 +218,7 @@ Current local checkout:
 ```toml
 [mcp_servers.browsefleet]
 command = "node"
-args = ["/absolute/path/to/browsermcp/dist/index.js"]
+args = ["/absolute/path/to/browsefleetmcp/dist/index.js"]
 ```
 
 ## Add to Cursor
@@ -219,7 +245,7 @@ Current local checkout:
   "mcpServers": {
     "browsefleet": {
       "command": "node",
-      "args": ["/absolute/path/to/browsermcp/dist/index.js"]
+      "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
     }
   }
 }
@@ -240,7 +266,7 @@ claude mcp add --transport stdio browsefleet -- npx -y browsefleetmcp
 Current local checkout:
 
 ```bash
-claude mcp add --transport stdio browsefleet -- node /absolute/path/to/browsermcp/dist/index.js
+claude mcp add --transport stdio browsefleet -- node /absolute/path/to/browsefleetmcp/dist/index.js
 ```
 
 If you want the config shared in the repo, use `--scope project` and Claude Code will write a `.mcp.json` file in the project root.
@@ -267,7 +293,7 @@ Current local checkout:
   "mcpServers": {
     "browsefleet": {
       "command": "node",
-      "args": ["/absolute/path/to/browsermcp/dist/index.js"]
+      "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
     }
   }
 }
@@ -308,7 +334,7 @@ Current local checkout:
 ```json
 {
   "command": "node",
-  "args": ["/absolute/path/to/browsermcp/dist/index.js"]
+  "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
 }
 ```
 
@@ -327,7 +353,7 @@ Some native Windows MCP clients cannot launch `npx` directly. If that happens, w
 
 - `No connected tab`: the extension is loaded, but no tab is connected yet.
 - The MCP client starts but no browser tools work: reload the extension, reconnect a tab, and retry.
-- You are developing this repo and your client still sees an old version: point the client at `node /absolute/path/to/browsermcp/dist/index.js` instead of `npx -y browsefleetmcp`.
+- You are developing this repo and your client still sees an old version: point the client at `node /absolute/path/to/browsefleetmcp/dist/index.js` instead of `npx -y browsefleetmcp`.
 
 ## Local rebuild notes
 

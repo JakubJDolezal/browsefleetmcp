@@ -71,6 +71,29 @@ body {
   margin-top: 10px;
 }
 
+.health-summary,
+.health-warnings {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.health-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.health-warning {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(154, 43, 43, 0.22);
+  border-radius: 10px;
+  background: rgba(154, 43, 43, 0.06);
+  color: var(--danger);
+  font-size: 11px;
+}
+
 .fields {
   display: grid;
   gap: 10px;
@@ -87,7 +110,8 @@ body {
   font-size: 12px;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -95,6 +119,10 @@ body {
   color: var(--text);
   padding: 8px 10px;
   font: inherit;
+}
+
+.field input[type="password"] {
+  letter-spacing: 0.08em;
 }
 
 .session {
@@ -118,6 +146,20 @@ body {
   font-size: 12px;
 }
 
+.session-details {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(216, 207, 191, 0.65);
+  display: grid;
+  gap: 4px;
+}
+
+.session-detail {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -139,6 +181,11 @@ body {
 .status-error,
 .error {
   color: var(--danger);
+}
+
+.warning {
+  margin: 8px 0 0;
+  color: #8b5a00;
 }
 
 .session-meta .muted {

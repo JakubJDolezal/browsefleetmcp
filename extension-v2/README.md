@@ -24,7 +24,7 @@ This extension keeps the same browser tool surface, but changes the runtime mode
 - Socket response envelope type: `messageResponse`.
 - DOM operations still go through a content script.
 - Input automation still uses `chrome.debugger`.
-- Focus-sensitive actions (`browser_click`, `browser_drag`, `browser_hover`, `browser_press_key`, and `browser_type`) are serialized behind one global focus lock and bring the target session window to the front first.
+- Focus-sensitive actions (`browser_click`, `browser_drag`, `browser_hover`, `browser_press_key`, `browser_select_option`, and `browser_type`) are serialized behind one global focus lock and bring the target session window to the front first.
 - Inactive-tab screenshots still fall back to `Page.captureScreenshot`.
 
 ## Build
@@ -36,9 +36,20 @@ npm run build
 
 Then load `extension-v2/` as an unpacked extension in Chrome.
 
+## Testing
+
+```bash
+npm test
+npm run test:e2e
+```
+
+To rerun just one classified action in the headed E2E, set `BROWSEFLEET_E2E_ACTION` to the socket request type you want to exercise, for example `browser_click` or `browser_drag`.
+
 ## Ports
 
 The extension defaults to BrowseFleetMCP on port `9150`, with backup ports `9152` and `9154`. You can change the primary port and backup ports from the popup UI, and the session controller will try each configured port until it finds a running local server.
+
+If the MCP server is started with `--auth-token` or `BROWSEFLEETMCP_AUTH_TOKEN`, enter the same token in the popup before connecting a tab.
 
 ## Current scope
 

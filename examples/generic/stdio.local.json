@@ -1,4 +1,4 @@
 {
   "command": "node",
-  "args": ["/absolute/path/to/browsermcp/dist/index.js"]
+  "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
 }

@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "BrowseFleetMCP",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "minimum_chrome_version": "116",
   "description": "Parallel browser control with isolated windows, real screenshots, and MCP support.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -23,7 +24,9 @@
     "type": "module"
   },
   "permissions": [
+    "desktopCapture",
     "debugger",
+    "offscreen",
     "scripting",
     "storage",
     "tabs",

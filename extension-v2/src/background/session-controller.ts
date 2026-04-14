@@ -18,13 +18,10 @@ import {
   withPossibleNavigation,
 } from "./runtime.js";
 import {
-  SOCKET_RESPONSE_TYPE,
   type ConnectionSettings,
   type ConsoleEntry,
   type SessionRecord,
-  type SocketRequestMessage,
-  type SocketResponseMessage,
-  getSocketPortCandidates,
+  type SessionTransportPatch,
   isConnectableUrl,
   nowIso,
 } from "../shared/protocol.js";
@@ -34,6 +31,8 @@ export type SessionControllerOptions = {
   getConnectionSettings: () => Promise<ConnectionSettings>;
   onUpdate: (record: SessionRecord) => void;
   onDisposed: (sessionId: string) => void;
+  startTransport?: (sessionId: string) => Promise<void>;
+  stopTransport?: (sessionId: string) => Promise<void>;
   runWithFocusLock?: <T>(
     record: Pick<SessionRecord, "sessionId" | "tabId" | "windowId">,
     action: () => Promise<T>,
@@ -41,8 +40,6 @@ export type SessionControllerOptions = {
 };
 
 export class SessionController {
-  private socket?: WebSocket;
-  private reconnectTimer?: number;
   private disposed = false;
   private record: SessionRecord;
 
@@ -63,14 +60,6 @@ export class SessionController {
       return;
     }
 
-    if (
-      this.socket &&
-      (this.socket.readyState === WebSocket.OPEN ||
-        this.socket.readyState === WebSocket.CONNECTING)
-    ) {
-      return;
-    }
-
     const tab = await this.getTab();
     const url = tab.url ?? "";
     if (!isConnectableUrl(url)) {
@@ -78,7 +67,7 @@ export class SessionController {
         status: "error",
         url,
         title: tab.title ?? this.record.title,
-        lastError: "This tab cannot host a BrowseFleetMCP session.",
+        lastTransportError: "This tab cannot host a BrowseFleetMCP session.",
       });
       return;
     }
@@ -88,73 +77,42 @@ export class SessionController {
       title: tab.title ?? this.record.title,
       url,
       windowId: tab.windowId ?? this.record.windowId,
-      lastError: undefined,
+      lastTransportError: undefined,
+      lastCommandError: undefined,
     });
 
-    const connectionSettings = await this.options.getConnectionSettings();
-    const socket = await this.openSocketWithFallbacks(
-      getSocketPortCandidates(connectionSettings),
-    );
-    this.socket = socket;
-
-    socket.addEventListener("open", () => {
-      this.updateRecord({
-        status: "connected",
-        lastError: undefined,
-      });
-    });
-
-    socket.addEventListener("message", (event) => {
-      void this.handleSocketMessage(socket, event.data);
-    });
-
-    socket.addEventListener("error", () => {
+    try {
+      await this.options.startTransport?.(this.record.sessionId);
+    } catch (error) {
+      const message = errorMessage(error);
       this.updateRecord({
         status: "error",
-        lastError:
-          "Failed to connect to the local BrowseFleetMCP server on the configured ports.",
+        lastTransportError: message,
       });
-    });
-
-    socket.addEventListener("close", () => {
-      if (this.socket === socket) {
-        this.socket = undefined;
-      }
-
-      if (this.disposed) {
-        this.updateRecord({ status: "disconnected" });
-        return;
-      }
-
-      this.updateRecord({
-        status: "error",
-        lastError: "BrowseFleetMCP session disconnected. Retrying.",
-      });
-      this.scheduleReconnect();
-    });
+      throw new Error(message);
+    }
   }
 
   async disconnect(): Promise<void> {
     this.disposed = true;
-    this.clearReconnectTimer();
-    await detachDebugger(this.record.tabId);
-
-    if (this.socket) {
-      const socket = this.socket;
-      this.socket = undefined;
-      if (
-        socket.readyState === WebSocket.OPEN ||
-        socket.readyState === WebSocket.CONNECTING
-      ) {
-        socket.close();
-      }
+    let stopTransportError: unknown;
+    try {
+      await this.options.stopTransport?.(this.record.sessionId);
+    } catch (error) {
+      stopTransportError = error;
     }
+
+    await detachDebugger(this.record.tabId);
 
     this.updateRecord({
       status: "disconnected",
-      lastError: undefined,
+      lastTransportError: undefined,
     });
     this.options.onDisposed(this.record.sessionId);
+
+    if (stopTransportError) {
+      throw stopTransportError;
+    }
   }
 
   async refreshFromTab(): Promise<void> {
@@ -166,99 +124,7 @@ export class SessionController {
     });
   }
 
-  private async handleSocketMessage(
-    socket: WebSocket,
-    data: string,
-  ): Promise<void> {
-    let message: SocketRequestMessage;
-    try {
-      message = JSON.parse(data) as SocketRequestMessage;
-    } catch {
-      return;
-    }
-
-    let result: unknown;
-    let error: string | undefined;
-    try {
-      result = await this.routeSocketRequest(message.type, message.payload);
-    } catch (caughtError) {
-      error = errorMessage(caughtError);
-      this.updateRecord({ status: "error", lastError: error });
-    }
-
-    if (socket.readyState !== WebSocket.OPEN) {
-      return;
-    }
-
-    const response: SocketResponseMessage = {
-      id: crypto.randomUUID(),
-      type: SOCKET_RESPONSE_TYPE,
-      payload: {
-        requestId: message.id,
-        result,
-        error,
-      },
-    };
-    socket.send(JSON.stringify(response));
-  }
-
-  private async openSocketWithFallbacks(ports: number[]): Promise<WebSocket> {
-    let lastError: unknown;
-
-    for (const port of ports) {
-      try {
-        return await this.openSocket(port);
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    throw (
-      lastError ??
-      new Error(
-        `Unable to connect to BrowseFleetMCP on ports ${ports.join(", ")}.`,
-      )
-    );
-  }
-
-  private async openSocket(port: number): Promise<WebSocket> {
-    const socketUrl = new URL(`ws://127.0.0.1:${port}`);
-    socketUrl.searchParams.set("sessionId", this.record.sessionId);
-    socketUrl.searchParams.set("tabId", String(this.record.tabId));
-    socketUrl.searchParams.set("windowId", String(this.record.windowId));
-
-    return await new Promise<WebSocket>((resolve, reject) => {
-      const socket = new WebSocket(socketUrl.toString());
-      const handleOpen = () => {
-        cleanup();
-        resolve(socket);
-      };
-      const handleError = () => {
-        cleanup();
-        try {
-          socket.close();
-        } catch {
-          // Ignore close failures while probing candidate ports.
-        }
-        reject(new Error(`Unable to open BrowseFleetMCP socket on port ${port}.`));
-      };
-      const handleClose = () => {
-        cleanup();
-        reject(new Error(`BrowseFleetMCP socket on port ${port} closed during connect.`));
-      };
-      const cleanup = () => {
-        socket.removeEventListener("open", handleOpen);
-        socket.removeEventListener("error", handleError);
-        socket.removeEventListener("close", handleClose);
-      };
-
-      socket.addEventListener("open", handleOpen);
-      socket.addEventListener("error", handleError);
-      socket.addEventListener("close", handleClose);
-    });
-  }
-
-  private async routeSocketRequest(
+  async routeSocketRequest(
     type: string,
     payload: any,
   ): Promise<unknown> {
@@ -378,9 +244,10 @@ export class SessionController {
         payload: { selector, options: { clickable: true } },
       },
     );
+    const pointerMotion = await this.getPointerMotionOptions();
 
     const navigated = await withPossibleNavigation(this.record.tabId, async () =>
-      clickPoint(this.record.tabId, coordinates),
+      clickPoint(this.record.tabId, coordinates, pointerMotion),
     );
 
     await this.afterInteraction(navigated);
@@ -405,8 +272,9 @@ export class SessionController {
         payload: { selector: endSelector, options: { clickable: true } },
       },
     );
+    const pointerMotion = await this.getPointerMotionOptions();
 
-    await dragBetweenPoints(this.record.tabId, start, end);
+    await dragBetweenPoints(this.record.tabId, start, end, pointerMotion);
     await this.waitForStableDom();
   }
 
@@ -424,7 +292,12 @@ export class SessionController {
         payload: { selector },
       },
     );
-    await moveMouse(this.record.tabId, coordinates);
+    await moveMouse(
+      this.record.tabId,
+      coordinates,
+      0,
+      await this.getPointerMotionOptions(),
+    );
     await this.waitForStableDom();
   }
 
@@ -439,28 +312,44 @@ export class SessionController {
       type: "scrollIntoView",
       payload: { selector },
     });
-
+    const coordinates = await sendTabMessage<{ x: number; y: number }>(
+      this.record.tabId,
+      {
+        type: "getElementCoordinates",
+        payload: { selector, options: { clickable: true } },
+      },
+    );
+    await clickPoint(
+      this.record.tabId,
+      coordinates,
+      await this.getPointerMotionOptions(),
+    );
     const inputType = await sendTabMessage<string | null>(this.record.tabId, {
       type: "getInputType",
       payload: { selector },
     });
+    await sendTabMessage(this.record.tabId, {
+      type: "selectText",
+      payload: { selector },
+    });
+    await pressKeyCombo(this.record.tabId, "Backspace");
+    await typeText(this.record.tabId, text);
     if (
       inputType &&
       ["date", "time", "datetime-local", "month", "range", "week"].includes(
         inputType,
       )
     ) {
-      await sendTabMessage(this.record.tabId, {
-        type: "setInputValue",
-        payload: { selector, value: text },
-      });
-    } else {
-      await sendTabMessage(this.record.tabId, {
-        type: "selectText",
+      const currentValue = await sendTabMessage<string>(this.record.tabId, {
+        type: "getInputValue",
         payload: { selector },
       });
-      await pressKeyCombo(this.record.tabId, "Backspace");
-      await typeText(this.record.tabId, text);
+      if (currentValue !== text) {
+        await sendTabMessage(this.record.tabId, {
+          type: "setInputValue",
+          payload: { selector, value: text },
+        });
+      }
     }
 
     if (submit) {
@@ -495,6 +384,15 @@ export class SessionController {
       await pressKeyCombo(this.record.tabId, key);
     });
     await this.afterInteraction(navigated);
+  }
+
+  private async getPointerMotionOptions(): Promise<{
+    pointerMode: ConnectionSettings["pointerMode"];
+  }> {
+    const settings = await this.options.getConnectionSettings();
+    return {
+      pointerMode: settings.pointerMode,
+    };
   }
 
   private async getSelectorForRef(ref: string): Promise<string> {
@@ -532,6 +430,26 @@ export class SessionController {
     await this.waitForStableDom();
   }
 
+  applyTransportUpdate(patch: SessionTransportPatch): void {
+    this.updateRecord(patch);
+  }
+
+  recordCommandError(message: string): void {
+    this.updateRecord({
+      lastCommandError: message,
+    });
+  }
+
+  recordCommandSuccess(): void {
+    if (!this.record.lastCommandError) {
+      return;
+    }
+
+    this.updateRecord({
+      lastCommandError: undefined,
+    });
+  }
+
   private updateRecord(patch: Partial<SessionRecord>): void {
     const hasChanged = Object.entries(patch).some(
       ([key, value]) => this.record[key as keyof SessionRecord] !== value,
@@ -546,19 +464,5 @@ export class SessionController {
       updatedAt: nowIso(),
     };
     this.options.onUpdate(this.recordSnapshot);
-  }
-
-  private scheduleReconnect(): void {
-    this.clearReconnectTimer();
-    this.reconnectTimer = setTimeout(() => {
-      void this.connect();
-    }, 1_000) as unknown as number;
-  }
-
-  private clearReconnectTimer(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = undefined;
-    }
   }
 }

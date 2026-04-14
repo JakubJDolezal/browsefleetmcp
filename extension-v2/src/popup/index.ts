@@ -1,6 +1,7 @@
 import type {
   ConnectionSettings,
   CurrentTabInfo,
+  ExtensionStatus,
   PopupRequest,
   RuntimeResponse,
   SessionRecord,
@@ -20,6 +21,14 @@ function getElement<T extends HTMLElement>(id: string): T {
     throw new Error(`Missing popup element "${id}".`);
   }
   return element as T;
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 }
 
 function setError(message?: string): void {
@@ -43,6 +52,83 @@ async function sendPopupRequest<T>(message: PopupRequest): Promise<T> {
   return response.data;
 }
 
+function formatTimestamp(value?: string | null): string {
+  if (!value) {
+    return "n/a";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatCloseInfo(session: SessionRecord): string {
+  const parts = [];
+  if (typeof session.lastCloseCode === "number") {
+    parts.push(`code ${session.lastCloseCode}`);
+  }
+  if (session.lastCloseReason) {
+    parts.push(session.lastCloseReason);
+  }
+
+  return parts.length > 0 ? parts.join(" | ") : "n/a";
+}
+
+function createDetail(label: string, value: string): HTMLElement {
+  const line = document.createElement("p");
+  line.className = "session-detail";
+  line.textContent = `${label}: ${value}`;
+  return line;
+}
+
+function renderExtensionStatus(status: ExtensionStatus): void {
+  const summary = getElement<HTMLDivElement>("health-summary");
+  const warnings = getElement<HTMLDivElement>("health-warnings");
+  summary.innerHTML = "";
+  warnings.innerHTML = "";
+
+  const connectedLine = document.createElement("p");
+  connectedLine.className = "health-line";
+  connectedLine.textContent = `Extension ${status.extensionVersion} | Server ${status.serverMetadata?.serverVersion ?? "unknown"} | Sessions ${status.activeSessionCount}/${status.storedSessionCount}`;
+  summary.appendChild(connectedLine);
+
+  const sourceLine = document.createElement("p");
+  sourceLine.className = "health-line";
+  sourceLine.textContent = `Build root: ${status.buildSourceRoot ?? "unknown"}`;
+  summary.appendChild(sourceLine);
+
+  const serverLine = document.createElement("p");
+  serverLine.className = "health-line";
+  serverLine.textContent = `Server cwd: ${status.serverMetadata?.serverCwd ?? "unknown"}`;
+  summary.appendChild(serverLine);
+
+  const transportLine = document.createElement("p");
+  transportLine.className = "health-line";
+  transportLine.textContent = `Transport: ${status.transportMode} | Browser ${status.browserVersion ?? "unknown"}`;
+  summary.appendChild(transportLine);
+
+  if (status.warnings.length === 0) {
+    warnings.classList.add("hidden");
+    return;
+  }
+
+  warnings.classList.remove("hidden");
+  for (const warningText of status.warnings) {
+    const warning = document.createElement("p");
+    warning.className = "health-warning";
+    warning.textContent = warningText;
+    warnings.appendChild(warning);
+  }
+}
+
 function renderCurrentTab(currentTab: CurrentTabInfo): void {
   const currentTabElement = getElement<HTMLParagraphElement>("current-tab");
   currentTabElement.textContent = `${currentTab.title} (${currentTab.url || "no url"})`;
@@ -60,7 +146,7 @@ function createSessionCard(session: SessionRecord): HTMLElement {
 
   const title = document.createElement("h3");
   title.className = "session-title";
-  title.textContent = session.title || "Untitled";
+  title.textContent = session.label || session.title || "Untitled";
 
   const url = document.createElement("p");
   url.className = "session-url";
@@ -94,7 +180,7 @@ function createSessionCard(session: SessionRecord): HTMLElement {
         payload: { sessionId: session.sessionId },
       });
     } catch (error) {
-      setError(String(error));
+      setError(formatError(error));
     }
   });
   actions.appendChild(focusButton);
@@ -112,7 +198,7 @@ function createSessionCard(session: SessionRecord): HTMLElement {
       });
       await refresh();
     } catch (error) {
-      setError(String(error));
+      setError(formatError(error));
     }
   });
   actions.appendChild(disconnectButton);
@@ -120,11 +206,31 @@ function createSessionCard(session: SessionRecord): HTMLElement {
   meta.appendChild(actions);
   card.append(title, url, meta);
 
-  if (session.lastError) {
+  const details = document.createElement("div");
+  details.className = "session-details";
+  if (session.label && session.label !== session.title) {
+    details.append(createDetail("Page", session.title || "Untitled"));
+  }
+  details.append(
+    createDetail("Heartbeat", formatTimestamp(session.lastHeartbeatAt)),
+    createDetail("Retries", String(session.retryCount ?? 0)),
+    createDetail("Last close", formatCloseInfo(session)),
+    createDetail("Last drop", formatTimestamp(session.lastDisconnectAt)),
+  );
+  card.appendChild(details);
+
+  if (session.lastTransportError) {
     const error = document.createElement("p");
     error.className = "error";
-    error.textContent = session.lastError;
+    error.textContent = `Transport: ${session.lastTransportError}`;
     card.appendChild(error);
+  }
+
+  if (session.lastCommandError) {
+    const commandError = document.createElement("p");
+    commandError.className = "warning";
+    commandError.textContent = `Last command: ${session.lastCommandError}`;
+    card.appendChild(commandError);
   }
 
   return card;
@@ -155,6 +261,8 @@ function renderConnectionSettings(settings: ConnectionSettings): void {
   );
   getElement<HTMLInputElement>("fallback-ports").value =
     settings.fallbackPorts.join(", ");
+  getElement<HTMLInputElement>("auth-token").value = settings.authToken;
+  getElement<HTMLSelectElement>("pointer-mode").value = settings.pointerMode;
 }
 
 function parsePortInput(value: string): number {
@@ -175,22 +283,65 @@ function readConnectionSettings(): ConnectionSettings {
     .map((candidate) => candidate.trim())
     .filter(Boolean)
     .map(parsePortInput);
+  const authToken = getElement<HTMLInputElement>("auth-token").value;
+  const pointerMode =
+    getElement<HTMLSelectElement>("pointer-mode").value === "human"
+      ? "human"
+      : "direct";
 
-  return normalizeConnectionSettings({ primaryPort, fallbackPorts });
+  return normalizeConnectionSettings({
+    primaryPort,
+    fallbackPorts,
+    authToken,
+    pointerMode,
+  });
 }
 
 async function runRefresh(): Promise<void> {
-  setError(undefined);
-  const [currentTab, sessions, connectionSettings] = await Promise.all([
-    sendPopupRequest<CurrentTabInfo>({ type: "popup/get-current-tab" }),
-    sendPopupRequest<SessionRecord[]>({ type: "popup/list-sessions" }),
-    sendPopupRequest<ConnectionSettings>({
-      type: "popup/get-connection-settings",
-    }),
-  ]);
-  renderCurrentTab(currentTab);
-  renderSessions(sessions);
-  renderConnectionSettings(connectionSettings);
+  const [
+    currentTabResult,
+    sessionsResult,
+    connectionSettingsResult,
+    extensionStatusResult,
+  ] =
+    await Promise.allSettled([
+      sendPopupRequest<CurrentTabInfo>({ type: "popup/get-current-tab" }),
+      sendPopupRequest<SessionRecord[]>({ type: "popup/list-sessions" }),
+      sendPopupRequest<ConnectionSettings>({
+        type: "popup/get-connection-settings",
+      }),
+      sendPopupRequest<ExtensionStatus>({
+        type: "popup/get-extension-status",
+      }),
+    ]);
+
+  const refreshErrors = [];
+
+  if (currentTabResult.status === "fulfilled") {
+    renderCurrentTab(currentTabResult.value);
+  } else {
+    refreshErrors.push(formatError(currentTabResult.reason));
+  }
+
+  if (sessionsResult.status === "fulfilled") {
+    renderSessions(sessionsResult.value);
+  } else {
+    refreshErrors.push(formatError(sessionsResult.reason));
+  }
+
+  if (connectionSettingsResult.status === "fulfilled") {
+    renderConnectionSettings(connectionSettingsResult.value);
+  } else {
+    refreshErrors.push(formatError(connectionSettingsResult.reason));
+  }
+
+  if (extensionStatusResult.status === "fulfilled") {
+    renderExtensionStatus(extensionStatusResult.value);
+  } else {
+    refreshErrors.push(formatError(extensionStatusResult.reason));
+  }
+
+  setError(refreshErrors.length > 0 ? refreshErrors.join(" | ") : undefined);
 }
 
 async function refresh(): Promise<void> {
@@ -203,7 +354,7 @@ async function refresh(): Promise<void> {
     refreshPromise = undefined;
     if (refreshQueued) {
       refreshQueued = false;
-      void refresh().catch((error) => setError(String(error)));
+      void refresh().catch((error) => setError(formatError(error)));
     }
   });
 
@@ -222,7 +373,7 @@ async function connectCurrentTab(): Promise<void> {
     });
     await refresh();
   } catch (error) {
-    setError(String(error));
+    setError(formatError(error));
   }
 }
 
@@ -236,7 +387,7 @@ async function saveConnectionSettings(): Promise<void> {
     });
     await refresh();
   } catch (error) {
-    setError(String(error));
+    setError(formatError(error));
   }
 }
 
@@ -268,4 +419,4 @@ function wireEvents(): void {
 }
 
 wireEvents();
-void refresh().catch((error) => setError(String(error)));
+void refresh().catch((error) => setError(formatError(error)));

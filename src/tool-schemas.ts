@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withFocusLockDescription } from "@/focus-tools";
 
 const emptyArguments = z.object({}).strict();
 
@@ -35,7 +36,10 @@ export const WaitTool = z.object({
 export const PressKeyTool = z.object({
   name: z.literal("browser_press_key"),
   description: z.literal(
-    "Press a keyboard key or key combination. Requires browser focus and runs behind a global focus lock.",
+    withFocusLockDescription(
+      "browser_press_key",
+      "Press a keyboard key or key combination.",
+    ),
   ),
   arguments: z.object({
     key: z.string(),
@@ -53,7 +57,10 @@ export const SnapshotTool = z.object({
 export const ClickTool = z.object({
   name: z.literal("browser_click"),
   description: z.literal(
-    "Click an element in the current page. Requires browser focus and runs behind a global focus lock.",
+    withFocusLockDescription(
+      "browser_click",
+      "Click an element in the current page.",
+    ),
   ),
   arguments: z.object({
     element: z.string(),
@@ -64,7 +71,10 @@ export const ClickTool = z.object({
 export const DragTool = z.object({
   name: z.literal("browser_drag"),
   description: z.literal(
-    "Drag from one element to another. Requires browser focus and runs behind a global focus lock.",
+    withFocusLockDescription(
+      "browser_drag",
+      "Drag from one element to another.",
+    ),
   ),
   arguments: z.object({
     startElement: z.string(),
@@ -77,7 +87,10 @@ export const DragTool = z.object({
 export const HoverTool = z.object({
   name: z.literal("browser_hover"),
   description: z.literal(
-    "Hover over an element. Requires browser focus and runs behind a global focus lock.",
+    withFocusLockDescription(
+      "browser_hover",
+      "Hover over an element.",
+    ),
   ),
   arguments: z.object({
     element: z.string(),
@@ -88,7 +101,10 @@ export const HoverTool = z.object({
 export const TypeTool = z.object({
   name: z.literal("browser_type"),
   description: z.literal(
-    "Type text into an element. Requires browser focus and runs behind a global focus lock.",
+    withFocusLockDescription(
+      "browser_type",
+      "Type text into an element.",
+    ),
   ),
   arguments: z.object({
     element: z.string(),
@@ -100,7 +116,12 @@ export const TypeTool = z.object({
 
 export const SelectOptionTool = z.object({
   name: z.literal("browser_select_option"),
-  description: z.literal("Select one or more options in a select element."),
+  description: z.literal(
+    withFocusLockDescription(
+      "browser_select_option",
+      "Select one or more options in a select element.",
+    ),
+  ),
   arguments: z.object({
     element: z.string(),
     ref: z.string(),

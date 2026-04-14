@@ -8,7 +8,7 @@
       name="description"
       content="BrowseFleetMCP CLI usage, commands, flags, ports, broker overrides, auth tokens, and local checkout commands."
     />
-    <meta name="theme-color" content="#142028" />
+    <meta name="theme-color" content="#081018" />
     <link rel="canonical" href="https://jakubjdolezal.github.io/browsefleetmcp/cli.html" />
     <meta property="og:title" content="BrowseFleetMCP CLI" />
     <meta
@@ -33,120 +33,145 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" href="data:," />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Space Grotesk", "Avenir Next", "Segoe UI", "sans-serif"],
+              mono: ["IBM Plex Mono", "SFMono-Regular", "monospace"],
+            },
+            colors: {
+              fleet: {
+                bg: "#081018",
+                mist: "#e7e9e4",
+                sand: "#efe3ce",
+                cyan: "#42c5c0",
+                ember: "#db7440",
+              },
+            },
+          },
+        },
+      };
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
-    <div class="page-shell">
-      <header class="site-header">
-        <a class="brand" href="./index.html" aria-label="BrowseFleetMCP home">
-          <img src="./assets/fleet-mark.svg" alt="" />
-          <span>BrowseFleetMCP</span>
-        </a>
-        <nav class="site-nav" aria-label="Primary">
-          <a data-nav-link href="./install.html">Install</a>
-          <a data-nav-link href="./clients.html">Clients</a>
-          <a data-nav-link href="./cli.html">CLI</a>
-          <a data-nav-link href="./claude-desktop.html">Claude Desktop</a>
-          <a href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
-        </nav>
+  <body class="antialiased">
+    <div class="relative overflow-hidden">
+      <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
+            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
+            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          </a>
+          <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
+            <a data-nav-link class="nav-link" href="./index.html">Overview</a>
+            <a data-nav-link class="nav-link" href="./install.html">Install</a>
+            <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
+            <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
+            <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+          </nav>
+        </div>
       </header>
 
-      <main>
-        <section class="page-hero" data-reveal>
-          <div class="doc-panel doc-panel-light">
-            <p class="breadcrumbs"><a href="./index.html">Home</a> / CLI</p>
-            <p class="eyebrow">Command Line Interface</p>
-            <h1>BrowseFleetMCP already ships with a direct CLI.</h1>
-            <p class="hero-text page-text">
-              You can run the stdio server directly from the shell, set ports, override
-              broker ports, or add an auth token without going through an MCP client first.
-            </p>
-            <div class="snippet-block">
+      <main class="pb-14">
+        <section data-reveal class="py-12 sm:py-16">
+          <div class="mx-auto grid max-w-7xl gap-8 px-6 lg:grid-cols-[minmax(0,1.08fr)_25rem] lg:items-end">
+            <div class="surface-panel p-8 sm:p-10">
+              <p class="breadcrumbs"><a href="./index.html">Home</a> / CLI</p>
+              <p class="eyebrow">Command line interface</p>
+              <h1 class="max-w-4xl text-5xl font-bold leading-none tracking-[-0.07em] text-white sm:text-6xl">
+                The CLI is first-class. It is not just an implementation detail behind MCP.
+              </h1>
+              <p class="mt-6 max-w-3xl text-lg leading-8 text-white/70">
+                Use it when you want to run the server directly, choose ports, override the
+                broker path, or lock the local transport down with an auth token.
+              </p>
+            </div>
+
+            <aside class="code-window">
               <button class="copy-button" data-copy-target="cli-basic-snippet">Copy</button>
               <pre id="cli-basic-snippet"><code>browsefleetmcp
 browsefleetmcp serve
 browsefleetmcp --help
 browsefleetmcp --version</code></pre>
-            </div>
+            </aside>
           </div>
-
-          <aside class="doc-panel doc-panel-dark">
-            <p class="panel-kicker">What the CLI is for</p>
-            <ul class="point-list point-list-dark">
-              <li>Run the server outside any MCP client.</li>
-              <li>Choose preferred and fallback ports.</li>
-              <li>Set broker ports separately.</li>
-              <li>Protect the local transport with a shared token.</li>
-            </ul>
-          </aside>
         </section>
 
-        <section class="doc-grid" data-reveal>
-          <article class="doc-section">
-            <p class="eyebrow">Direct run</p>
-            <h2>Start the stdio server directly</h2>
-            <p>
-              The bare command and the explicit <code>serve</code> subcommand both start
-              the same stdio MCP server.
-            </p>
-            <div class="snippet-block">
-              <button class="copy-button" data-copy-target="cli-serve-snippet">Copy</button>
-              <pre id="cli-serve-snippet"><code>browsefleetmcp
+        <section data-reveal class="py-8 sm:py-10">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+              <div class="detail-box p-6">
+                <p class="soft-label">--port</p>
+                <p class="mt-4 text-xl font-semibold text-white">Browser WebSocket port</p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">--fallback-ports</p>
+                <p class="mt-4 text-xl font-semibold text-white">Backup browser ports</p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">--broker-port</p>
+                <p class="mt-4 text-xl font-semibold text-white">Internal broker port</p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">--broker-fallback-ports</p>
+                <p class="mt-4 text-xl font-semibold text-white">Backup broker ports</p>
+              </div>
+              <div class="detail-box p-6">
+                <p class="soft-label">--auth-token</p>
+                <p class="mt-4 text-xl font-semibold text-white">Shared local auth</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 xl:grid-cols-2">
+            <article class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Direct run</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Start the stdio server from the shell.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-white/66">
+                The bare command and the explicit <code>serve</code> subcommand both launch
+                the same runtime.
+              </p>
+              <div class="mt-6 code-window">
+                <button class="copy-button" data-copy-target="cli-serve-snippet">Copy</button>
+                <pre id="cli-serve-snippet"><code>browsefleetmcp
 browsefleetmcp serve</code></pre>
-            </div>
-          </article>
+              </div>
+            </article>
 
-          <article class="doc-section">
-            <p class="eyebrow">Local checkout</p>
-            <h2>Run the current repo checkout directly</h2>
-            <p>
-              This is the best path when you are actively developing the repo and do not
-              want your client or shell session to pull the published npm package.
-            </p>
-            <div class="snippet-block">
-              <button class="copy-button" data-copy-target="cli-local-snippet">Copy</button>
-              <pre id="cli-local-snippet"><code>npm run build
-node /absolute/path/to/browsermcp/dist/index.js</code></pre>
-            </div>
-          </article>
-        </section>
-
-        <section class="doc-section" data-reveal>
-          <p class="eyebrow">Flags</p>
-          <h2>Supported CLI options</h2>
-          <div class="option-grid">
-            <div class="option-card">
-              <h3><code>--port</code></h3>
-              <p>Preferred browser WebSocket port.</p>
-            </div>
-            <div class="option-card">
-              <h3><code>--fallback-ports</code></h3>
-              <p>Comma-separated backup browser WebSocket ports.</p>
-            </div>
-            <div class="option-card">
-              <h3><code>--broker-port</code></h3>
-              <p>Preferred internal broker port.</p>
-            </div>
-            <div class="option-card">
-              <h3><code>--broker-fallback-ports</code></h3>
-              <p>Comma-separated backup internal broker ports.</p>
-            </div>
-            <div class="option-card">
-              <h3><code>--auth-token</code></h3>
-              <p>Shared token used to authenticate the extension and broker.</p>
-            </div>
+            <article class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Local checkout</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Run the current repo build instead of the published package.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-white/66">
+                This is the cleanest path when you are developing the repo and do not want
+                any client or shell session to pull the npm release.
+              </p>
+              <div class="mt-6 code-window">
+                <button class="copy-button" data-copy-target="cli-local-snippet">Copy</button>
+                <pre id="cli-local-snippet"><code>npm run build
+node /absolute/path/to/browsefleetmcp/dist/index.js</code></pre>
+              </div>
+            </article>
           </div>
         </section>
 
-        <section class="doc-grid" data-reveal>
-          <article class="doc-section">
-            <p class="eyebrow">Ports</p>
-            <h2>Browser and broker overrides</h2>
-            <div class="snippet-block">
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 xl:grid-cols-2">
+            <div class="code-window">
               <button class="copy-button" data-copy-target="cli-ports-snippet">Copy</button>
               <pre id="cli-ports-snippet"><code>browsefleetmcp --port 9200 --fallback-ports 9202,9204
 
@@ -154,40 +179,52 @@ browsefleetmcp \
   --broker-port 9300 \
   --broker-fallback-ports 9302,9304</code></pre>
             </div>
-          </article>
-
-          <article class="doc-section">
-            <p class="eyebrow">Auth token</p>
-            <h2>Set a shared token from the CLI or the environment</h2>
-            <div class="snippet-block">
+            <div class="code-window">
               <button class="copy-button" data-copy-target="cli-auth-snippet">Copy</button>
               <pre id="cli-auth-snippet"><code>browsefleetmcp --auth-token your-shared-token
 
 BROWSEFLEETMCP_AUTH_TOKEN=your-shared-token browsefleetmcp</code></pre>
             </div>
-          </article>
-        </section>
-
-        <section class="doc-section" data-reveal>
-          <p class="eyebrow">Inspector</p>
-          <h2>Open the MCP inspector during local development</h2>
-          <p>
-            The repo ships an inspector script in <code>package.json</code> for local debugging.
-          </p>
-          <div class="snippet-block">
-            <button class="copy-button" data-copy-target="cli-inspector-snippet">Copy</button>
-            <pre id="cli-inspector-snippet"><code>npm run inspector</code></pre>
           </div>
         </section>
 
-        <div class="pager" data-reveal>
-          <a class="pager-link" href="./clients.html">Previous: Client Configs</a>
+        <section data-reveal class="py-10 sm:py-12">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="warm-panel grid gap-8 p-8 sm:p-10 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-end">
+              <div>
+                <p class="eyebrow !text-[#8d4f2f]">Local debugging</p>
+                <h2 class="max-w-3xl text-4xl font-bold leading-none tracking-[-0.06em] sm:text-5xl">
+                  Use the inspector when you want to debug the server path directly.
+                </h2>
+                <p class="mt-5 max-w-2xl text-base leading-8 text-black/68">
+                  The repo already includes an inspector script in
+                  <code>package.json</code>. That gives you a direct way to inspect the MCP
+                  server outside the client UIs.
+                </p>
+              </div>
+
+              <div class="code-window">
+                <button class="copy-button" data-copy-target="cli-inspector-snippet">Copy</button>
+                <pre id="cli-inspector-snippet"><code>npm run inspector</code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div data-reveal class="mx-auto grid max-w-7xl gap-4 px-6 pt-2 md:grid-cols-2">
+          <a class="pager-link" href="./clients.html">Previous: client configs</a>
           <a class="pager-link" href="./claude-desktop.html">Next: Claude Desktop</a>
         </div>
       </main>
 
-      <footer class="site-footer">
-        <p>The CLI and the MCP-client launch path use the same server entrypoint. The difference is who starts it.</p>
+      <footer class="border-t border-white/10">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p class="footer-copy">
+            The CLI and the MCP launch path use the same server entrypoint. The difference
+            is who starts it.
+          </p>
+          <p class="soft-label">CLI docs</p>
+        </div>
       </footer>
     </div>
 

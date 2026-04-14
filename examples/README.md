@@ -2,6 +2,8 @@
 
 These files are ready-to-copy starting points for MCP clients that can run a local stdio server.
 
+You still need this repo checkout for the unpacked Chrome extension in `extension-v2/`, even when your MCP client launches the published npm package.
+
 Published package examples:
 
 - `codex/config.toml`
@@ -25,14 +27,14 @@ Use the published package files when you want your client to launch the npm rele
 Use the local checkout files when you want your client to launch this repo directly with:
 
 ```bash
-node /absolute/path/to/browsermcp/dist/index.js
+node /absolute/path/to/browsefleetmcp/dist/index.js
 ```
 
 Important:
 
-- Build the root server first with `npm install && npm run build`.
-- Build and load the Chrome extension from `extension-v2/`.
+- Build `extension-v2/` and load it in Chrome before you try any browser tools.
+- Only build the root server first with `npm install && npm run build` if you are using the local checkout examples.
 - Connect a tab from the extension popup before calling browser tools.
-- Replace `/absolute/path/to/browsermcp/dist/index.js` with the real absolute path on your machine.
+- Replace `/absolute/path/to/browsefleetmcp/dist/index.js` with the real absolute path on your machine.
 
 Claude Desktop is handled differently. For that client, package the repo as an `.mcpb` bundle using the root `manifest.json` and `.mcpbignore`.

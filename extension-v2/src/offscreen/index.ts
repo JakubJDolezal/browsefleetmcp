@@ -73,12 +73,27 @@ chrome.runtime.onMessage.addListener(
     _sender: unknown,
     sendResponse: (response: unknown) => void,
   ) => {
-    if (message.type !== "offscreen/capture-desktop") {
+    if (
+      typeof message?.type !== "string" ||
+      !message.type.startsWith("offscreen/")
+    ) {
       return undefined;
     }
 
-    void captureDesktopFrame(message.payload.streamId)
-      .then((capture) => sendResponse(capture))
+    void (async () => {
+      switch (message.type) {
+        case "offscreen/capture-desktop":
+          return await captureDesktopFrame(message.payload.streamId);
+        case "offscreen/get-status":
+          return {
+            activeSessionCount: 0,
+            keepAlive: false,
+          };
+        default:
+          throw new Error(`Unsupported offscreen request "${message.type}".`);
+      }
+    })()
+      .then((result) => sendResponse(result))
       .catch((error) => {
         const message =
           error instanceof Error ? error.message : String(error);

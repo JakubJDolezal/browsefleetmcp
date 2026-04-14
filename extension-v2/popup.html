@@ -18,6 +18,16 @@
 
       <section class="panel">
         <div class="panel-header">
+          <h2>Health</h2>
+        </div>
+        <div id="health-summary" class="health-summary">
+          <p class="muted">Loading extension health...</p>
+        </div>
+        <div id="health-warnings" class="health-warnings hidden"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
           <h2>Current Tab</h2>
           <button id="connect-current" type="button">Split Into Window &amp; Connect</button>
         </div>
@@ -43,8 +53,25 @@
               placeholder="9152, 9154"
             />
           </label>
+          <label class="field">
+            <span>Auth Token</span>
+            <input
+              id="auth-token"
+              type="password"
+              placeholder="Match --auth-token or BROWSEFLEETMCP_AUTH_TOKEN"
+            />
+          </label>
+          <label class="field">
+            <span>Pointer Mode</span>
+            <select id="pointer-mode">
+              <option value="direct">Direct</option>
+              <option value="human">Human-like</option>
+            </select>
+          </label>
         </div>
-        <p class="muted">BrowseFleetMCP tries the primary port first, then the backup ports.</p>
+        <p class="muted">
+          BrowseFleetMCP tries the primary port first, then the backup ports. If the CLI server is using an auth token, enter the same token here. Human-like pointer mode moves through a cursor path before focused pointer actions.
+        </p>
       </section>
 
       <section class="panel">

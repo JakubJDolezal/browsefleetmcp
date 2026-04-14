@@ -8,7 +8,7 @@
       name="description"
       content="BrowseFleetMCP setup docs for install, CLI usage, Codex, Cursor, Claude Code, and Claude Desktop."
     />
-    <meta name="theme-color" content="#142028" />
+    <meta name="theme-color" content="#081018" />
     <link rel="canonical" href="https://jakubjdolezal.github.io/browsefleetmcp/" />
     <meta property="og:title" content="BrowseFleetMCP" />
     <meta
@@ -33,176 +33,367 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" href="data:," />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Space Grotesk", "Avenir Next", "Segoe UI", "sans-serif"],
+              mono: ["IBM Plex Mono", "SFMono-Regular", "monospace"],
+            },
+            colors: {
+              fleet: {
+                bg: "#081018",
+                mist: "#e7e9e4",
+                sand: "#efe3ce",
+                cyan: "#42c5c0",
+                ember: "#db7440",
+              },
+            },
+            boxShadow: {
+              glow: "0 28px 120px rgba(0, 0, 0, 0.35)",
+            },
+          },
+        },
+      };
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
-    <div class="page-shell">
-      <header class="site-header">
-        <a class="brand" href="./index.html" aria-label="BrowseFleetMCP home">
-          <img src="./assets/fleet-mark.svg" alt="" />
-          <span>BrowseFleetMCP</span>
-        </a>
-        <nav class="site-nav" aria-label="Primary">
-          <a data-nav-link href="./install.html">Install</a>
-          <a data-nav-link href="./clients.html">Clients</a>
-          <a data-nav-link href="./cli.html">CLI</a>
-          <a data-nav-link href="./claude-desktop.html">Claude Desktop</a>
-          <a href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
-        </nav>
+  <body class="antialiased">
+    <div class="relative overflow-hidden">
+      <div class="hero-gridline"></div>
+      <div class="glow-ring left-[-8rem] top-[7rem] h-[24rem] w-[24rem]"></div>
+      <div class="glow-ring right-[-10rem] top-[12rem] h-[28rem] w-[28rem]"></div>
+
+      <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
+            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
+            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          </a>
+          <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
+            <a data-nav-link class="nav-link" href="./index.html">Overview</a>
+            <a data-nav-link class="nav-link" href="./install.html">Install</a>
+            <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
+            <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
+            <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+          </nav>
+        </div>
       </header>
 
       <main>
-        <section class="hero" data-reveal>
-          <div class="hero-copy">
-            <div class="hero-topline">
-              <p class="status-pill">Codex · Cursor · Claude · CLI</p>
-              <p class="hero-badge">Uses your real Chrome profile</p>
-            </div>
+        <section data-reveal class="relative isolate">
+          <div class="mx-auto grid min-h-[calc(100svh-82px)] max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[minmax(0,1.2fr)_27rem] lg:items-center lg:py-20">
+            <div class="pb-4">
+              <div class="mb-8 flex flex-wrap items-center gap-3 text-[0.76rem] font-bold uppercase tracking-[0.24em] text-white/65">
+                <span class="rounded-full border border-white/12 bg-white/5 px-4 py-2">Codex</span>
+                <span class="rounded-full border border-white/12 bg-white/5 px-4 py-2">Cursor</span>
+                <span class="rounded-full border border-white/12 bg-white/5 px-4 py-2">Claude</span>
+                <span class="rounded-full border border-white/12 bg-white/5 px-4 py-2">CLI</span>
+              </div>
 
-            <div class="hero-body">
               <p class="eyebrow">Local browser automation over MCP</p>
-              <h1>One browser stack. Four client paths. Direct CLI too.</h1>
-              <p class="hero-text">
-                BrowseFleetMCP pairs a local stdio MCP server with a Chrome extension so
-                coding agents and direct shell workflows can drive your real browser with
-                isolated sessions.
+              <h1 class="max-w-4xl text-5xl font-bold leading-none tracking-[-0.07em] text-white sm:text-6xl lg:text-[5.8rem]">
+                Drive your real Chrome from agents or the shell.
+              </h1>
+              <p class="mt-7 max-w-2xl text-lg leading-8 text-white/70 sm:text-xl">
+                BrowseFleetMCP runs a local stdio MCP server, pairs it with a Chrome
+                extension, and keeps sessions isolated so multiple tools can work without
+                fighting over the same browser state.
               </p>
-            </div>
+              <p class="mt-4 max-w-2xl text-base leading-8 text-white/58">
+                The extension lives in this repo checkout. The server can come either from
+                the published <code>npx -y browsefleetmcp</code> package or from your local
+                built <code>dist/index.js</code>.
+              </p>
 
-            <div class="hero-foot">
-              <div class="hero-actions">
-                <a class="button button-solid" href="./install.html">Start Setup</a>
-                <a class="button button-outline" href="./cli.html">Open CLI Docs</a>
+              <div class="mt-10 flex flex-wrap gap-4">
+                <a
+                  href="./install.html"
+                  class="inline-flex items-center justify-center rounded-full bg-fleet-cyan px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-slate-950 no-underline transition hover:-translate-y-0.5 hover:bg-[#6ad7d2]"
+                >
+                  Start setup
+                </a>
+                <a
+                  href="./clients.html"
+                  class="inline-flex items-center justify-center rounded-full border border-white/14 bg-white/5 px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white no-underline transition hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/8"
+                >
+                  Open client configs
+                </a>
               </div>
 
-              <div class="hero-points" aria-label="Key qualities">
-                <p>Runs locally</p>
-                <p>Leased sessions</p>
-                <p>Standard stdio transport</p>
+              <div class="mt-14 grid gap-4 sm:grid-cols-3">
+                <div class="stat-box p-5">
+                  <p class="soft-label">Transport</p>
+                  <p class="mt-3 text-lg font-semibold text-white">Standard stdio MCP</p>
+                </div>
+                <div class="stat-box p-5">
+                  <p class="soft-label">Sessions</p>
+                  <p class="mt-3 text-lg font-semibold text-white">Leased, isolated tabs</p>
+                </div>
+                <div class="stat-box p-5">
+                  <p class="soft-label">Browser</p>
+                  <p class="mt-3 text-lg font-semibold text-white">Your existing profile</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="hero-panel">
-            <div class="panel-top">
-              <p class="panel-kicker">Choose a route</p>
-              <div class="panel-badges" aria-label="Documentation routes">
-                <span>Install</span>
-                <span>Clients</span>
-                <span>CLI</span>
+            <aside class="dark-panel p-6 sm:p-8">
+              <div class="flex items-center gap-2 text-white/55">
+                <span class="terminal-dot text-[#ff7a59]"></span>
+                <span class="terminal-dot text-[#ffb347]"></span>
+                <span class="terminal-dot text-fleet-cyan"></span>
               </div>
-            </div>
-            <ol class="route-list">
-              <li><span>01</span> Build the root MCP server.</li>
-              <li><span>02</span> Build and load the Chrome extension.</li>
-              <li><span>03</span> Add the server to Codex, Cursor, Claude, or another MCP client.</li>
-              <li><span>04</span> Or run it directly from the command line.</li>
-            </ol>
-            <p class="panel-note">
-              Browser actions only work after a tab is connected from the extension popup.
-              If not, tool calls will fail with <code>No connected tab</code>.
-            </p>
+
+              <div class="mt-8 space-y-6">
+                <div>
+                  <p class="soft-label">System map</p>
+                  <h2 class="mt-3 text-3xl font-bold leading-tight tracking-[-0.05em] text-white">
+                    One server. One extension. Multiple entry points.
+                  </h2>
+                </div>
+
+                <div class="space-y-4 text-sm text-white/72">
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p class="soft-label">01 Server</p>
+                  <p class="mt-2 text-base font-semibold text-white">Local stdio process</p>
+                  <p class="mt-2 leading-7">
+                    The root package is the actual runtime whether you launch it from
+                    Codex, Cursor, Claude Code, Claude Desktop, or the shell.
+                  </p>
+                </div>
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p class="soft-label">02 Extension</p>
+                  <p class="mt-2 text-base font-semibold text-white">Repo checkout plus connected tab</p>
+                  <p class="mt-2 leading-7">
+                    No browser action works until the extension from
+                    <code>extension-v2/</code> is loaded and the current tab is connected
+                    from the popup.
+                  </p>
+                </div>
+                  <div class="rounded-3xl border border-white/10 bg-white/5 p-4">
+                    <p class="soft-label">03 Route</p>
+                    <p class="mt-2 text-base font-semibold text-white">Pick your launcher</p>
+                    <p class="mt-2 leading-7">
+                      Use direct CLI commands, config JSON or TOML, or the Claude Desktop
+                      bundle path depending on the client.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="terminal-rule"></div>
+
+                <div class="rounded-3xl border border-fleet-cyan/20 bg-fleet-cyan/8 p-4">
+                  <p class="soft-label">Most common setup failure</p>
+                  <p class="mt-2 text-base leading-7 text-white">
+                    If the extension is loaded but no tab is attached, tool calls fail with
+                    <code>No connected tab</code>.
+                  </p>
+                </div>
+              </div>
+            </aside>
           </div>
         </section>
 
-        <section class="signal-strip" data-reveal>
-          <div>
-            <p class="signal-label">What you install</p>
-            <h2>Server, extension, client config, or direct CLI.</h2>
-          </div>
-          <div class="signal-lines">
-            <p><strong>Root package</strong> runs the stdio MCP server and CLI.</p>
-            <p><strong>Chrome extension</strong> bridges tabs into leased sessions.</p>
-            <p><strong>Client config</strong> launches the same server from Codex, Cursor, Claude Code, or generic stdio MCP hosts.</p>
-          </div>
-        </section>
-
-        <section class="guide-links" data-reveal>
-          <div class="section-heading">
-            <p class="eyebrow">Docs Routes</p>
-            <h2>Use the page that matches the job.</h2>
-          </div>
-
-          <div class="guide-grid">
-            <a class="guide-card" href="./install.html">
-              <p class="guide-card-kicker">Install</p>
-              <h3>Build the server, load the extension, and connect the first tab.</h3>
-              <p>Start here if you want the end-to-end local setup path.</p>
-            </a>
-
-            <a class="guide-card" href="./clients.html">
-              <p class="guide-card-kicker">Clients</p>
-              <h3>Copy the right MCP config for Codex, Cursor, Claude Code, or generic stdio.</h3>
-              <p>Use this when you need the exact config file or command shape.</p>
-            </a>
-
-            <a class="guide-card" href="./cli.html">
-              <p class="guide-card-kicker">CLI</p>
-              <h3>Run BrowseFleetMCP directly with ports, broker overrides, or auth tokens.</h3>
-              <p>The CLI is first-class. It is not just an implementation detail behind MCP clients.</p>
-            </a>
-
-            <a class="guide-card" href="./claude-desktop.html">
-              <p class="guide-card-kicker">Claude Desktop</p>
-              <h3>Bundle the repo into an MCPB extension and install it in Claude Desktop.</h3>
-              <p>Use this if you want the desktop-extension route instead of manual JSON config.</p>
-            </a>
-          </div>
-        </section>
-
-        <section class="pages" data-reveal>
-          <div class="section-heading">
-            <p class="eyebrow">GitHub Pages</p>
-            <h2>The docs site is ready for Pages, social previews, and a custom domain.</h2>
-          </div>
-
-          <div class="pages-grid">
-            <div class="pages-copy">
-              <p>
-                The workflow in <code>.github/workflows/pages.yml</code> deploys the
-                <code>docs/</code> directory directly to GitHub Pages at
-                <code>https://jakubjdolezal.github.io/browsefleetmcp/</code>.
-              </p>
-              <p>
-              Social preview metadata is now included on the landing page and the major
-              subpages, using <code>docs/assets/social-card.png</code> generated from the
-              source card at <code>docs/assets/social-card.svg</code>.
-              </p>
-              <p>
-                For a custom domain, copy <code>docs/CNAME.example</code> to
-                <code>docs/CNAME</code>, replace it with your actual domain, then update the
-                canonical and Open Graph URLs if you want the metadata to point at the
-                custom hostname instead of the default GitHub Pages URL.
+        <section data-reveal class="relative py-8 sm:py-12">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p class="eyebrow">Choose your route</p>
+                <h2 class="max-w-3xl text-4xl font-bold leading-none tracking-[-0.06em] text-white sm:text-5xl">
+                  Setup, configs, direct CLI, or desktop bundle.
+                </h2>
+              </div>
+              <p class="max-w-xl text-base leading-8 text-white/60">
+                Every page below is built for a different job. Start with install if you
+                want the end-to-end path. Jump straight to clients or CLI if the browser
+                side is already in place.
               </p>
             </div>
 
-            <div class="snippet-block">
-              <button class="copy-button" data-copy-target="pages-snippet">Copy</button>
-              <pre id="pages-snippet"><code>docs/
-  index.html
-  install.html
-  clients.html
-  cli.html
-  claude-desktop.html
-  CNAME.example
-  assets/social-card.png
-  assets/social-card.svg
+            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              <a href="./install.html" class="route-link p-6 no-underline">
+                <p class="soft-label">Install</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  Build the server, load the extension, connect the first tab.
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/64">
+                  The full local setup path, in order, with ports and auth token notes.
+                </p>
+              </a>
 
-.github/workflows/pages.yml</code></pre>
+              <a href="./clients.html" class="route-link p-6 no-underline">
+                <p class="soft-label">Clients</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  Copy the right config for Codex, Cursor, Claude, or generic stdio.
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/64">
+                  Same server entrypoint, different launcher formats and config files.
+                </p>
+              </a>
+
+              <a href="./cli.html" class="route-link p-6 no-underline">
+                <p class="soft-label">CLI</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  Run BrowseFleetMCP directly with ports, broker overrides, and auth.
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/64">
+                  Use this when you want the runtime without an MCP host in the middle.
+                </p>
+              </a>
+
+              <a href="./claude-desktop.html" class="route-link p-6 no-underline">
+                <p class="soft-label">Claude Desktop</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  Package the repo as an MCP bundle and install the extension path.
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/64">
+                  Desktop-native install route for users who do not want to hand-edit JSON.
+                </p>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-10 sm:py-14">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="surface-panel overflow-hidden p-8 sm:p-10">
+              <div class="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-start">
+                <div>
+                  <p class="eyebrow">Operational flow</p>
+                  <h2 class="max-w-2xl text-4xl font-bold leading-none tracking-[-0.06em] text-white sm:text-5xl">
+                    The setup has four moves. Keeping the order clean avoids most confusion.
+                  </h2>
+                  <p class="mt-5 max-w-xl text-base leading-8 text-white/68">
+                    This is not a hosted browser service. The server runs locally, the
+                    extension connects your real browser, and the client just decides how
+                    that process gets launched.
+                  </p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div class="flow-step p-5">
+                    <p class="soft-label">01</p>
+                    <p class="mt-4 text-xl font-semibold text-white">Build the root package</p>
+                    <p class="mt-3 text-sm leading-7 text-white/62">
+                      Compile the MCP server and CLI from the repo root.
+                    </p>
+                  </div>
+                  <div class="flow-step p-5">
+                    <p class="soft-label">02</p>
+                    <p class="mt-4 text-xl font-semibold text-white">Load the extension</p>
+                    <p class="mt-3 text-sm leading-7 text-white/62">
+                      Build <code>extension-v2/</code> and load it in Chrome.
+                    </p>
+                  </div>
+                  <div class="flow-step p-5">
+                    <p class="soft-label">03</p>
+                    <p class="mt-4 text-xl font-semibold text-white">Choose a launcher</p>
+                    <p class="mt-3 text-sm leading-7 text-white/62">
+                      Use MCP config, a CLI command, or a Claude Desktop bundle.
+                    </p>
+                  </div>
+                  <div class="flow-step p-5">
+                    <p class="soft-label">04</p>
+                    <p class="mt-4 text-xl font-semibold text-white">Connect the tab</p>
+                    <p class="mt-3 text-sm leading-7 text-white/62">
+                      Open the popup, confirm ports, add any auth token, and attach the current tab.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-10 sm:py-14">
+          <div class="mx-auto grid max-w-7xl gap-8 px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+            <div class="prose-copy space-y-5">
+              <p class="eyebrow">Quick launch pairs</p>
+              <h2 class="text-4xl font-bold leading-none tracking-[-0.06em] text-white sm:text-5xl">
+                Every client path resolves to the same command shape.
+              </h2>
+              <p class="max-w-2xl text-base leading-8">
+                Use the published package if you want the npm release. Use the local
+                checkout if you are actively developing the repo and want the client to run
+                your built <code>dist/index.js</code>.
+              </p>
+              <p class="max-w-2xl text-base leading-8">
+                On Windows, some clients need <code>cmd /c</code> in front of
+                <code>npx</code>. That note lives on the Clients page so the main page
+                stays focused on the path selection.
+              </p>
+            </div>
+
+            <div class="code-window">
+              <button class="copy-button" data-copy-target="entrypoints-snippet">Copy</button>
+              <pre id="entrypoints-snippet"><code>{
+  "command": "npx",
+  "args": ["-y", "browsefleetmcp"]
+}
+
+{
+  "command": "node",
+  "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
+}
+
+browsefleetmcp --port 9200 --fallback-ports 9202,9204
+browsefleetmcp --auth-token your-shared-token</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-12 sm:py-16">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="warm-panel p-8 sm:p-10 lg:p-12">
+              <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                <div>
+                  <p class="eyebrow !text-[#8d4f2f]">Ready to wire it up</p>
+                  <h2 class="max-w-3xl text-4xl font-bold leading-none tracking-[-0.06em] sm:text-5xl">
+                    Start with install if you want the cleanest path. Everything else is a launcher detail.
+                  </h2>
+                  <p class="mt-5 max-w-2xl text-base leading-8 text-black/68">
+                    The docs site is published from <code>docs/</code> through GitHub
+                    Pages. The repo examples remain available if you prefer copying config
+                    files directly instead of transcribing snippets.
+                  </p>
+                </div>
+
+                <div class="flex flex-wrap gap-4">
+                  <a
+                    href="./install.html"
+                    class="inline-flex items-center justify-center rounded-full bg-[#11161c] px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white no-underline transition hover:-translate-y-0.5"
+                  >
+                    Open install
+                  </a>
+                  <a
+                    href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples"
+                    class="inline-flex items-center justify-center rounded-full border border-black/12 bg-black/5 px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-[#11161c] no-underline transition hover:-translate-y-0.5"
+                  >
+                    Repo examples
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </section>
       </main>
 
-      <footer class="site-footer">
-        <p>
-          BrowseFleetMCP runs locally, uses your browser profile, and stays compatible
-          with standard stdio MCP clients and direct CLI usage.
-        </p>
+      <footer class="border-t border-white/10">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p class="footer-copy">
+            BrowseFleetMCP runs locally, uses your browser profile, and stays compatible
+            with standard stdio MCP clients and direct CLI usage.
+          </p>
+          <p class="soft-label">Open source docs on GitHub Pages</p>
+        </div>
       </footer>
     </div>
 

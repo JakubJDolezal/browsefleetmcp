@@ -2,7 +2,15 @@ import { randomUUID } from "node:crypto";
 
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 
+import type { AdminControls } from "@/admin-controls";
 import { getAuthToken, getBrokerPortCandidates } from "@/config";
+import type {
+  CreatedSession,
+  ExtensionControl,
+  ExtensionReloadResult,
+} from "@/extension-control";
+import { isFocusRequiredToolName } from "@/focus-tools";
+import { createToolErrorResult } from "@/tool-errors";
 
 import type { Resource, ResourceResult } from "@/resources/resource";
 import type { Tool, ToolResult } from "@/tools/tool";
@@ -36,6 +44,24 @@ type BrokerRequest =
       payload?: {
         authToken?: string;
       };
+    }
+  | {
+      id: string;
+      type: "createSession";
+      payload?: {
+        url?: string;
+        label?: string;
+      };
+    }
+  | {
+      id: string;
+      type: "reloadExtension";
+      payload?: undefined;
+    }
+  | {
+      id: string;
+      type: "restartTransport";
+      payload?: undefined;
     };
 
 type BrokerResponse =
@@ -47,6 +73,8 @@ type BrokerResponse =
         | {
             contents: ResourceResult[];
           }
+        | CreatedSession
+        | ExtensionReloadResult
         | string;
     }
   | {
@@ -74,6 +102,8 @@ function sendMessage(socket: WebSocket, message: BrokerResponse) {
 
 async function handleToolCall(
   sessionPool: SessionPool,
+  extensionControl: ExtensionControl,
+  adminControls: AdminControls,
   clientId: string,
   tools: Tool[],
   name: string,
@@ -82,7 +112,10 @@ async function handleToolCall(
   try {
     const sessionToolResult = await handleSessionTool(
       sessionPool,
+      extensionControl,
+      adminControls,
       clientId,
+      tools,
       name,
       params,
     );
@@ -92,19 +125,28 @@ async function handleToolCall(
 
     const tool = tools.find((tool) => tool.schema.name === name);
     if (!tool) {
-      return {
-        content: [{ type: "text", text: `Tool "${name}" not found` }],
-        isError: true,
-      };
+      return createToolErrorResult(new Error(`Tool "${name}" not found`), {
+        toolName: name,
+      });
     }
 
-    const { context, executor } = sessionPool.acquire(clientId);
+    const { context, executor, sessionId } = sessionPool.acquire(clientId);
+    if (isFocusRequiredToolName(name)) {
+      return await executor.run(() =>
+        sessionPool.runFocusSensitiveTask(
+          {
+            clientId,
+            sessionId,
+            toolName: name,
+          },
+          () => tool.handle(context, params),
+        ),
+      );
+    }
+
     return await executor.run(() => tool.handle(context, params));
   } catch (error) {
-    return {
-      content: [{ type: "text", text: String(error) }],
-      isError: true,
-    };
+    return createToolErrorResult(error, { toolName: name });
   }
 }
 
@@ -146,8 +188,11 @@ export async function createBrokerServer(options: {
   tools: Tool[];
   resources: Resource[];
   sessionPool: SessionPool;
+  extensionControl: ExtensionControl;
+  adminControls: AdminControls;
 }): Promise<WebSocketServer> {
-  const { tools, resources, sessionPool } = options;
+  const { tools, resources, sessionPool, extensionControl, adminControls } =
+    options;
 
   let lastError: unknown;
 
@@ -216,6 +261,8 @@ export async function createBrokerServer(options: {
                       ok: true,
                       result: await handleToolCall(
                         sessionPool,
+                        extensionControl,
+                        adminControls,
                         clientId,
                         tools,
                         message.payload.name,
@@ -235,6 +282,34 @@ export async function createBrokerServer(options: {
                       ),
                     });
                     return;
+                  case "createSession":
+                    sendMessage(socket, {
+                      id: message.id,
+                      ok: true,
+                      result: await extensionControl.createSession({
+                        url: message.payload?.url,
+                        label: message.payload?.label,
+                      }),
+                    });
+                    return;
+                  case "reloadExtension":
+                    sendMessage(socket, {
+                      id: message.id,
+                      ok: true,
+                      result: await extensionControl.reloadExtension(),
+                    });
+                    return;
+                  case "restartTransport": {
+                    const scheduled = adminControls.scheduleTransportRestart();
+                    sendMessage(socket, {
+                      id: message.id,
+                      ok: true,
+                      result: scheduled
+                        ? "Restarting the BrowseFleetMCP transport stack."
+                        : "A BrowseFleetMCP transport restart is already in progress.",
+                    });
+                    return;
+                  }
                 }
               } catch (error) {
                 sendMessage(socket, {
@@ -260,8 +335,13 @@ export async function createBrokerServer(options: {
 
 export class BrokerClient {
   private readonly pendingRequests = new Map<string, PendingRequest>();
+  private readonly closePromise: Promise<void>;
 
   private constructor(private readonly socket: WebSocket) {
+    this.closePromise = new Promise<void>((resolve) => {
+      this.socket.once("close", () => resolve());
+    });
+
     this.socket.on("message", (rawMessage) => {
       const message = parseMessage<BrokerResponse>(rawMessage);
       const request = this.pendingRequests.get(message.id);
@@ -338,7 +418,12 @@ export class BrokerClient {
       this.pendingRequests.set(id, { resolve, reject });
     });
 
-    this.socket.send(JSON.stringify({ id, type, payload }));
+    try {
+      this.socket.send(JSON.stringify({ id, type, payload }));
+    } catch (error) {
+      this.pendingRequests.delete(id);
+      throw error;
+    }
 
     return await response;
   }
@@ -356,6 +441,39 @@ export class BrokerClient {
     });
   }
 
+  async createSession(url?: string, label?: string) {
+    return await this.request<CreatedSession>("createSession", { url, label });
+  }
+
+  async reloadExtension() {
+    return await this.request<ExtensionReloadResult>("reloadExtension");
+  }
+
+  async restartTransport() {
+    return await this.request<string>("restartTransport");
+  }
+
+  async waitForClose(timeoutMs: number = 5_000) {
+    await new Promise<void>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(
+          new Error("Timed out waiting for the BrowseFleetMCP broker to close."),
+        );
+      }, timeoutMs);
+
+      void this.closePromise.then(
+        () => {
+          clearTimeout(timeoutId);
+          resolve();
+        },
+        (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        },
+      );
+    });
+  }
+
   async close() {
     if (
       this.socket.readyState === WebSocket.CLOSING ||
@@ -365,7 +483,27 @@ export class BrokerClient {
     }
 
     await new Promise<void>((resolve) => {
-      this.socket.once("close", () => resolve());
+      let settled = false;
+      const finish = () => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve();
+      };
+
+      const timeoutId = setTimeout(() => {
+        try {
+          this.socket.terminate();
+        } catch {
+          // Ignore termination failures during shutdown fallback.
+        }
+        finish();
+      }, 1_000);
+
+      this.socket.once("close", finish);
       this.socket.close();
     });
   }

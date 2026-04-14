@@ -1,13 +1,13 @@
 {
   "name": "browsefleetmcp-extension",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Clean TypeScript rebuild of the BrowseFleetMCP Chrome extension",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/build-content-script.mjs",
-    "test": "npm run build && node --test tests/background-service.test.mjs tests/cdp.test.mjs tests/focus-lock.test.mjs tests/session-controller.test.mjs",
-    "test:e2e": "npm run build && node --test tests/e2e-extension.test.mjs",
+    "build": "node scripts/write-build-info.mjs && tsc -p tsconfig.json && node scripts/build-content-script.mjs",
+    "test": "npm run build && node --test tests/background-service.test.mjs tests/cdp.test.mjs tests/control-transport.test.mjs tests/focus-lock.test.mjs tests/offscreen.test.mjs tests/runtime.test.mjs tests/session-controller.test.mjs tests/session-hub.test.mjs",
+    "test:e2e": "npm run build && node --test tests/e2e-single-session.test.mjs tests/e2e-background-actions.test.mjs tests/e2e-focus-required-actions.test.mjs tests/e2e-focus-lock.test.mjs",
     "test:full": "npm run test && npm run test:e2e"
   },
   "devDependencies": {

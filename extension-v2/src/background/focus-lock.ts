@@ -7,6 +7,7 @@ export const FOCUS_REQUIRED_SOCKET_REQUEST_TYPES = new Set([
   "browser_drag",
   "browser_hover",
   "browser_press_key",
+  "browser_select_option",
   "browser_type",
 ]);
 

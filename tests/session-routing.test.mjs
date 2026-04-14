@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { readFile } from "node:fs/promises";
+import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,8 +18,30 @@ const ROOT_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-const TEST_WS_PORT = 19450;
-const TEST_BROKER_PORT = 19451;
+const AUTH_TOKEN = "session-routing-test-token";
+
+async function findAvailablePort() {
+  return await new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        reject(new Error("Unable to determine an open test port."));
+        return;
+      }
+
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve(address.port);
+      });
+    });
+  });
+}
 
 function createResultPayload(requestId, result) {
   return JSON.stringify({
@@ -30,30 +54,79 @@ function createResultPayload(requestId, result) {
   });
 }
 
-async function createBrowserSession({ sessionId, tabId, windowId, title, url }) {
+function waitForHeartbeatAck(ws, requestId, timeoutMs = 5_000) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      ws.off("message", handleMessage);
+      reject(new Error("Timed out waiting for heartbeat acknowledgement."));
+    }, timeoutMs);
+
+    const handleMessage = (rawMessage) => {
+      const message = JSON.parse(String(rawMessage));
+      if (
+        message.type !== "heartbeatAck" ||
+        message.payload?.requestId !== requestId
+      ) {
+        return;
+      }
+
+      clearTimeout(timeoutId);
+      ws.off("message", handleMessage);
+      resolve(message);
+    };
+
+    ws.on("message", handleMessage);
+  });
+}
+
+async function createBrowserSession({
+  wsPort,
+  sessionId,
+  tabId,
+  windowId,
+  title,
+  url,
+  onRequest,
+}) {
   const ws = new WebSocket(
-    `ws://127.0.0.1:${TEST_WS_PORT}?sessionId=${encodeURIComponent(sessionId)}&tabId=${tabId}&windowId=${windowId}`,
+    `ws://127.0.0.1:${wsPort}?sessionId=${encodeURIComponent(sessionId)}&tabId=${tabId}&windowId=${windowId}&authToken=${encodeURIComponent(AUTH_TOKEN)}`,
   );
 
   ws.on("message", (rawMessage) => {
-    const message = JSON.parse(String(rawMessage));
-    let result = null;
+    void (async () => {
+      const message = JSON.parse(String(rawMessage));
+      if (message.type === "heartbeatAck") {
+        return;
+      }
 
-    switch (message.type) {
-      case "getTitle":
-        result = title;
-        break;
-      case "getUrl":
-        result = url;
-        break;
-      case "browser_snapshot":
-        result = `root:\n  session: ${sessionId}\n`;
-        break;
-      default:
-        throw new Error(`Unexpected socket request type "${message.type}"`);
-    }
+      if (onRequest) {
+        const customResult = await onRequest(message, ws);
+        if (customResult !== undefined) {
+          ws.send(createResultPayload(message.id, customResult));
+          return;
+        }
+      }
 
-    ws.send(createResultPayload(message.id, result));
+      let result = null;
+
+      switch (message.type) {
+        case "getTitle":
+          result = title;
+          break;
+        case "getUrl":
+          result = url;
+          break;
+        case "browser_snapshot":
+          result = `root:\n  session: ${sessionId}\n`;
+          break;
+        default:
+          throw new Error(`Unexpected socket request type "${message.type}"`);
+      }
+
+      ws.send(createResultPayload(message.id, result));
+    })().catch((error) => {
+      ws.emit("error", error);
+    });
   });
 
   if (ws.readyState !== WebSocket.OPEN) {
@@ -61,6 +134,20 @@ async function createBrowserSession({ sessionId, tabId, windowId, title, url }) 
   }
 
   return {
+    async heartbeat() {
+      const requestId = `heartbeat-${Math.random().toString(36).slice(2)}`;
+      const ackPromise = waitForHeartbeatAck(ws, requestId);
+      ws.send(
+        JSON.stringify({
+          id: requestId,
+          type: "heartbeat",
+          payload: {
+            sentAt: new Date().toISOString(),
+          },
+        }),
+      );
+      return await ackPromise;
+    },
     async close() {
       if (
         ws.readyState === WebSocket.CLOSING ||
@@ -76,15 +163,16 @@ async function createBrowserSession({ sessionId, tabId, windowId, title, url }) 
   };
 }
 
-async function createMcpClient(name) {
+async function createMcpClient(name, wsPort, brokerPort) {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: ["dist/index.js"],
     cwd: ROOT_DIR,
     stderr: "pipe",
     env: {
-      BROWSEFLEETMCP_PORT: String(TEST_WS_PORT),
-      BROWSEFLEETMCP_BROKER_PORT: String(TEST_BROKER_PORT),
+      BROWSEFLEETMCP_PORT: String(wsPort),
+      BROWSEFLEETMCP_BROKER_PORT: String(brokerPort),
+      BROWSEFLEETMCP_AUTH_TOKEN: AUTH_TOKEN,
     },
   });
   const stderr = [];
@@ -124,6 +212,14 @@ function getTextResult(result) {
   return textEntry.text;
 }
 
+function createDeferred() {
+  let resolve;
+  const promise = new Promise((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+}
+
 async function listSessions(client) {
   return JSON.parse(getTextResult(await callTool(client, "browser_list_sessions")));
 }
@@ -151,12 +247,19 @@ test(
     let sessionOne;
     let sessionTwo;
     let step = "starting";
+    const pendingCalls = [];
+    const wsPort = await findAvailablePort();
+    let brokerPort = await findAvailablePort();
+    while (brokerPort === wsPort) {
+      brokerPort = await findAvailablePort();
+    }
 
     try {
       step = "starting first MCP client";
-      clientOne = await createMcpClient("test-client-one");
+      clientOne = await createMcpClient("test-client-one", wsPort, brokerPort);
       step = "connecting first browser session";
       sessionOne = await createBrowserSession({
+        wsPort,
         sessionId: "session-one",
         tabId: 101,
         windowId: 201,
@@ -165,14 +268,25 @@ test(
       });
       step = "connecting second browser session";
       sessionTwo = await createBrowserSession({
+        wsPort,
         sessionId: "session-two",
         tabId: 102,
         windowId: 202,
         title: "Session Two",
         url: "https://session-two.test",
       });
+
+      step = "verifying heartbeat acknowledgement";
+      const heartbeatAck = await sessionOne.heartbeat();
+      assert.equal(heartbeatAck.type, "heartbeatAck");
+      assert.ok(heartbeatAck.payload?.receivedAt);
+
       step = "starting second MCP client";
-      clientTwo = await createMcpClient("test-client-two");
+      clientTwo = await createMcpClient(
+        "test-client-two",
+        wsPort,
+        brokerPort,
+      );
 
       step = "listing tools";
       const toolsResult = await clientOne.client.request(
@@ -186,6 +300,9 @@ test(
         toolsResult.tools.some((tool) => tool.name === "browser_list_sessions"),
       );
       assert.ok(
+        toolsResult.tools.some((tool) => tool.name === "browser_get_current_session"),
+      );
+      assert.ok(
         toolsResult.tools.some((tool) => tool.name === "browser_switch_session"),
       );
 
@@ -196,6 +313,35 @@ test(
         initialSessions.sessions.map((session) => session.sessionId),
         ["session-one", "session-two"],
       );
+      assert.deepEqual(
+        initialSessions.sessions.map((session) => session.recentClientCount),
+        [0, 0],
+      );
+
+      step = "capturing snapshot without a selected session";
+      const missingSelection = await callTool(clientOne.client, "browser_snapshot");
+      assert.equal(missingSelection.isError, true);
+      assert.match(getTextResult(missingSelection), /currently selected/i);
+
+      step = "switching first client to session one";
+      const switchedOne = await callTool(clientOne.client, "browser_switch_session", {
+        sessionId: "session-one",
+      });
+      assert.match(getTextResult(switchedOne), /Switched to session session-one/);
+
+      step = "switching second client to session two";
+      const switchedTwo = await callTool(clientTwo.client, "browser_switch_session", {
+        sessionId: "session-two",
+      });
+      assert.match(getTextResult(switchedTwo), /Switched to session session-two/);
+
+      step = "checking current session";
+      const currentSession = JSON.parse(
+        getTextResult(
+          await callTool(clientOne.client, "browser_get_current_session"),
+        ),
+      );
+      assert.equal(currentSession.session?.sessionId, "session-one");
 
       step = "capturing first snapshot";
       const firstSnapshot = getTextResult(
@@ -218,10 +364,19 @@ test(
         leasedSessions.sessions.map((session) => ({
           sessionId: session.sessionId,
           status: session.status,
+          recentClientCount: session.recentClientCount,
         })),
         [
-          { sessionId: "session-one", status: "current" },
-          { sessionId: "session-two", status: "in-use" },
+          {
+            sessionId: "session-one",
+            status: "current",
+            recentClientCount: 1,
+          },
+          {
+            sessionId: "session-two",
+            status: "in-use",
+            recentClientCount: 1,
+          },
         ],
       );
 
@@ -267,10 +422,19 @@ test(
         finalSessions.sessions.map((session) => ({
           sessionId: session.sessionId,
           status: session.status,
+          recentClientCount: session.recentClientCount,
         })),
         [
-          { sessionId: "session-one", status: "available" },
-          { sessionId: "session-two", status: "current" },
+          {
+            sessionId: "session-one",
+            status: "available",
+            recentClientCount: 1,
+          },
+          {
+            sessionId: "session-two",
+            status: "current",
+            recentClientCount: 2,
+          },
         ],
       );
     } catch (error) {
@@ -290,3 +454,227 @@ test(
     }
   },
 );
+
+test(
+  "focus-sensitive tools are serialized across selected sessions while background tools remain concurrent",
+  { timeout: 30_000 },
+  async () => {
+    let clientOne;
+    let clientTwo;
+    let sessionOne;
+    let sessionTwo;
+    let step = "starting";
+    const pendingCalls = [];
+    const wsPort = await findAvailablePort();
+    let brokerPort = await findAvailablePort();
+    while (brokerPort === wsPort) {
+      brokerPort = await findAvailablePort();
+    }
+
+    const events = [];
+    const clickRelease = createDeferred();
+    const snapshotRelease = createDeferred();
+
+    try {
+      step = "starting MCP clients";
+      clientOne = await createMcpClient("focus-lock-client-one", wsPort, brokerPort);
+      clientTwo = await createMcpClient("focus-lock-client-two", wsPort, brokerPort);
+
+      step = "connecting browser sessions";
+      sessionOne = await createBrowserSession({
+        wsPort,
+        sessionId: "focus-session-one",
+        tabId: 201,
+        windowId: 301,
+        title: "Focus Session One",
+        url: "https://focus-session-one.test",
+        onRequest: async (message) => {
+          switch (message.type) {
+            case "browser_click":
+              events.push({ type: "click-start", sessionId: "focus-session-one" });
+              await clickRelease.promise;
+              events.push({ type: "click-end", sessionId: "focus-session-one" });
+              return null;
+            case "browser_snapshot":
+              events.push({ type: "snapshot-start", sessionId: "focus-session-one" });
+              await snapshotRelease.promise;
+              events.push({ type: "snapshot-end", sessionId: "focus-session-one" });
+              return "root:\n  session: focus-session-one\n";
+            default:
+              return undefined;
+          }
+        },
+      });
+      sessionTwo = await createBrowserSession({
+        wsPort,
+        sessionId: "focus-session-two",
+        tabId: 202,
+        windowId: 302,
+        title: "Focus Session Two",
+        url: "https://focus-session-two.test",
+        onRequest: async (message) => {
+          switch (message.type) {
+            case "browser_click":
+              events.push({ type: "click-start", sessionId: "focus-session-two" });
+              events.push({ type: "click-end", sessionId: "focus-session-two" });
+              return null;
+            case "browser_snapshot":
+              events.push({ type: "snapshot-start", sessionId: "focus-session-two" });
+              events.push({ type: "snapshot-end", sessionId: "focus-session-two" });
+              return "root:\n  session: focus-session-two\n";
+            default:
+              return undefined;
+          }
+        },
+      });
+
+      step = "switching clients to sessions";
+      await callTool(clientOne.client, "browser_switch_session", {
+        sessionId: "focus-session-one",
+      });
+      await callTool(clientTwo.client, "browser_switch_session", {
+        sessionId: "focus-session-two",
+      });
+
+      step = "verifying concurrent background tools";
+      const firstSnapshotPromise = callTool(clientOne.client, "browser_snapshot");
+      pendingCalls.push(firstSnapshotPromise);
+      await waitFor(
+        async () =>
+          events.some(
+            (event) =>
+              event.type === "snapshot-start" &&
+              event.sessionId === "focus-session-one",
+          )
+            ? true
+            : undefined,
+        "first snapshot start",
+      );
+      const secondSnapshotPromise = callTool(clientTwo.client, "browser_snapshot");
+      pendingCalls.push(secondSnapshotPromise);
+      await waitFor(
+        async () =>
+          events.some(
+            (event) =>
+              event.type === "snapshot-start" &&
+              event.sessionId === "focus-session-two",
+          )
+            ? true
+            : undefined,
+        "second snapshot start",
+      );
+      assert.ok(
+        events.findIndex(
+          (event) =>
+            event.type === "snapshot-start" &&
+            event.sessionId === "focus-session-two",
+        ) <
+          events.findIndex(
+            (event) =>
+              event.type === "snapshot-end" &&
+              event.sessionId === "focus-session-one",
+          ) ||
+          !events.some(
+            (event) =>
+              event.type === "snapshot-end" &&
+              event.sessionId === "focus-session-one",
+          ),
+      );
+      snapshotRelease.resolve();
+      await Promise.all([firstSnapshotPromise, secondSnapshotPromise]);
+
+      step = "verifying serialized focus-sensitive tools";
+      const firstClickPromise = callTool(clientOne.client, "browser_click", {
+        element: "Busy button",
+        ref: "busy-ref",
+      });
+      pendingCalls.push(firstClickPromise);
+      await waitFor(
+        async () =>
+          events.some(
+            (event) =>
+              event.type === "click-start" &&
+              event.sessionId === "focus-session-one",
+          )
+            ? true
+            : undefined,
+        "first click start",
+      );
+      const secondClickPromise = callTool(clientTwo.client, "browser_click", {
+        element: "Busy button",
+        ref: "busy-ref",
+      });
+      pendingCalls.push(secondClickPromise);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      assert.equal(
+        events.some(
+          (event) =>
+            event.type === "click-start" &&
+            event.sessionId === "focus-session-two",
+        ),
+        false,
+      );
+      clickRelease.resolve();
+      await Promise.all([firstClickPromise, secondClickPromise]);
+
+      const clickEventOrder = events
+        .filter((event) => event.type.startsWith("click-"))
+        .map((event) => `${event.type}:${event.sessionId}`);
+      assert.deepEqual(clickEventOrder, [
+        "click-start:focus-session-one",
+        "click-end:focus-session-one",
+        "click-start:focus-session-two",
+        "click-end:focus-session-two",
+      ]);
+    } catch (error) {
+      throw new Error(
+        [
+          `Failed while ${step}.`,
+          `clientOne stderr: ${clientOne?.stderr?.join("").trim() || "(empty)"}`,
+          `clientTwo stderr: ${clientTwo?.stderr?.join("").trim() || "(empty)"}`,
+          `events: ${JSON.stringify(events)}`,
+          `cause: ${error instanceof Error ? error.stack ?? error.message : String(error)}`,
+        ].join("\n\n"),
+      );
+    } finally {
+      clickRelease.resolve();
+      snapshotRelease.resolve();
+      await Promise.allSettled(pendingCalls);
+      await closeMcpClient(clientTwo);
+      await closeMcpClient(clientOne);
+      await sessionTwo?.close();
+      await sessionOne?.close();
+    }
+  },
+);
+
+test("server focus-sensitive tool list matches the extension focus lock list", async () => {
+  const serverFocusToolsSource = await readFile(
+    path.join(ROOT_DIR, "src", "focus-tools.ts"),
+    "utf8",
+  );
+  const extensionFocusLockSource = await readFile(
+    path.join(ROOT_DIR, "extension-v2", "src", "background", "focus-lock.ts"),
+    "utf8",
+  );
+
+  const serverArrayMatch = serverFocusToolsSource.match(
+    /FOCUS_REQUIRED_TOOL_NAMES = \[([\s\S]*?)\] as const/,
+  );
+  const setLiteralMatch = extensionFocusLockSource.match(
+    /FOCUS_REQUIRED_SOCKET_REQUEST_TYPES = new Set\(\[([\s\S]*?)\]\)/,
+  );
+  assert.ok(serverArrayMatch, "Unable to locate the server focus tool list.");
+  assert.ok(setLiteralMatch, "Unable to locate the extension focus lock set.");
+
+  const serverToolNames = Array.from(
+    serverArrayMatch[1].matchAll(/"([^"]+)"/g),
+    (match) => match[1],
+  );
+  const extensionToolNames = Array.from(
+    setLiteralMatch[1].matchAll(/"([^"]+)"/g),
+    (match) => match[1],
+  );
+
+  assert.deepEqual(extensionToolNames, serverToolNames);
+});

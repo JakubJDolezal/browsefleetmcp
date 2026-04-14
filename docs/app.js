@@ -36,6 +36,7 @@ for (const link of navLinks) {
   const linkPath = normalizePath(new URL(link.href, window.location.href).pathname);
   if (linkPath === currentPath) {
     link.classList.add("is-active");
+    link.setAttribute("aria-current", "page");
   }
 }
 
@@ -54,7 +55,7 @@ for (const button of copyButtons) {
 
     try {
       await navigator.clipboard.writeText(text);
-      const original = button.textContent;
+      const original = button.textContent || "Copy";
       button.textContent = "Copied";
       button.classList.add("is-copied");
 

@@ -171,7 +171,11 @@ async function handleContentRequest(message: ContentRequest): Promise<unknown> {
         element instanceof HTMLInputElement ||
         element instanceof HTMLTextAreaElement
       ) {
-        element.select();
+        try {
+          element.select();
+        } catch {
+          // Some input types, such as date/time controls, cannot expose a text selection.
+        }
       } else {
         const selection = window.getSelection();
         if (!selection) {
@@ -192,6 +196,17 @@ async function handleContentRequest(message: ContentRequest): Promise<unknown> {
       return element instanceof HTMLInputElement
         ? element.type.toLowerCase()
         : null;
+    }
+    case "getInputValue": {
+      const element = getElementOrThrow(message.payload.selector);
+      if (
+        !(element instanceof HTMLInputElement) &&
+        !(element instanceof HTMLTextAreaElement) &&
+        !(element instanceof HTMLSelectElement)
+      ) {
+        throw new Error("Target element does not expose a form value.");
+      }
+      return element.value;
     }
     case "setInputValue": {
       const element = getElementOrThrow(message.payload.selector);

@@ -78,8 +78,9 @@ export async function runTabHistoryNavigation(
 export async function waitForTabComplete(
   tabId: number,
   timeoutMs = 30_000,
+  chromeApi: typeof chrome = chrome,
 ): Promise<any> {
-  const currentTab = await chrome.tabs.get(tabId);
+  const currentTab = await chromeApi.tabs.get(tabId);
   if (currentTab?.status === "complete") {
     return currentTab;
   }
@@ -88,7 +89,7 @@ export async function waitForTabComplete(
     let timeoutId = 0;
 
     const cleanup = () => {
-      chrome.tabs.onUpdated.removeListener(handleUpdate);
+      chromeApi.tabs.onUpdated.removeListener(handleUpdate);
       clearTimeout(timeoutId);
     };
 
@@ -101,7 +102,7 @@ export async function waitForTabComplete(
       }
 
       cleanup();
-      resolve(await chrome.tabs.get(tabId));
+      resolve(await chromeApi.tabs.get(tabId));
     };
 
     timeoutId = setTimeout(() => {
@@ -109,7 +110,7 @@ export async function waitForTabComplete(
       reject(new Error("Navigation timed out."));
     }, timeoutMs) as unknown as number;
 
-    chrome.tabs.onUpdated.addListener(handleUpdate);
+    chromeApi.tabs.onUpdated.addListener(handleUpdate);
   });
 }
 
@@ -127,6 +128,9 @@ export async function withPossibleNavigation(
   chrome.webNavigation.onBeforeNavigate.addListener(handleNavigate);
   try {
     await action();
+    if (!navigationStarted) {
+      await wait(100);
+    }
   } finally {
     chrome.webNavigation.onBeforeNavigate.removeListener(handleNavigate);
   }

@@ -81,6 +81,7 @@ test("socketRequestRequiresFocus only marks focus-sensitive actions", () => {
   assert.equal(socketRequestRequiresFocus("browser_drag"), true);
   assert.equal(socketRequestRequiresFocus("browser_hover"), true);
   assert.equal(socketRequestRequiresFocus("browser_press_key"), true);
+  assert.equal(socketRequestRequiresFocus("browser_select_option"), true);
   assert.equal(socketRequestRequiresFocus("browser_type"), true);
   assert.equal(socketRequestRequiresFocus("browser_screen_screenshot"), false);
 
@@ -89,7 +90,6 @@ test("socketRequestRequiresFocus only marks focus-sensitive actions", () => {
   assert.equal(socketRequestRequiresFocus("browser_go_back"), false);
   assert.equal(socketRequestRequiresFocus("browser_go_forward"), false);
   assert.equal(socketRequestRequiresFocus("browser_wait"), false);
-  assert.equal(socketRequestRequiresFocus("browser_select_option"), false);
   assert.equal(socketRequestRequiresFocus("browser_screenshot"), false);
   assert.equal(socketRequestRequiresFocus("browser_get_console_logs"), false);
 });
