@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="520" viewBox="0 0 1600 520" fill="none">
+  <rect width="1600" height="520" rx="52" fill="#F7F3EB"/>
+  <rect x="22" y="22" width="1556" height="476" rx="38" fill="url(#surface)"/>
+  <circle cx="1294" cy="120" r="120" fill="#E4EFEA"/>
+  <circle cx="1420" cy="400" r="148" fill="#F2E4D5"/>
+  <g transform="translate(86 100)">
+    <rect x="0" y="0" width="220" height="220" rx="50" fill="url(#markBg)"/>
+    <rect x="0" y="0" width="220" height="220" rx="50" stroke="rgba(244,239,230,0.18)"/>
+    <path d="M37 165H118" stroke="#F4EFE6" stroke-width="6.5" stroke-linecap="round"/>
+    <path d="M114 165.2H178" stroke="#F4EFE6" stroke-width="5.9" stroke-linecap="round"/>
+    <path d="M71 164.8H163" stroke="#F4EFE6" stroke-width="6.9" stroke-linecap="round"/>
+    <path d="M44 162L72 79L117 162H44Z" fill="url(#emberPeak)"/>
+    <path d="M77 162L111 52L159 162H77Z" fill="url(#cyanPeak)"/>
+    <path d="M117 162L139 93L170 162H117Z" fill="#F4EFE6"/>
+  </g>
+  <text x="350" y="213" fill="#17212B" font-family="Arial, Helvetica, sans-serif" font-size="118" font-weight="700" letter-spacing="-2">BrowseFleetMCP</text>
+  <text x="354" y="286" fill="#1B8790" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="6">LOCAL CHROME CONTROL FOR MCP CLIENTS</text>
+
+  <defs>
+    <linearGradient id="surface" x1="22" y1="22" x2="1578" y2="498" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8EF"/>
+      <stop offset="1" stop-color="#F0E7DB"/>
+    </linearGradient>
+    <linearGradient id="markBg" x1="26" y1="18" x2="194" y2="198" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#122431"/>
+      <stop offset="1" stop-color="#091018"/>
+    </linearGradient>
+    <linearGradient id="cyanPeak" x1="97" y1="54" x2="150" y2="162" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#59D4CF"/>
+      <stop offset="1" stop-color="#1F9EAA"/>
+    </linearGradient>
+    <linearGradient id="emberPeak" x1="46" y1="76" x2="103" y2="162" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F08C54"/>
+      <stop offset="1" stop-color="#D46C2E"/>
+    </linearGradient>
+  </defs>
+</svg>
