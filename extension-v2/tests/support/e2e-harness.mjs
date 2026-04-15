@@ -610,6 +610,7 @@ async function connectTabFromPopupWithRetry(
   popupPage,
   targetUrl,
   maxAttempts = 3,
+  beforeRetry,
 ) {
   let lastResponse;
 
@@ -621,6 +622,9 @@ async function connectTabFromPopupWithRetry(
 
     lastResponse = response;
     if (attempt < maxAttempts) {
+      if (beforeRetry) {
+        await beforeRetry();
+      }
       await wait(250 * attempt);
     }
   }
@@ -631,6 +635,14 @@ async function connectTabFromPopupWithRetry(
 async function listSessionsFromPopup(popupPage) {
   return await popupPage.evaluate(async () => {
     return await chrome.runtime.sendMessage({ type: "popup/list-sessions" });
+  });
+}
+
+async function getConnectionSettingsFromPopup(popupPage) {
+  return await popupPage.evaluate(async () => {
+    return await chrome.runtime.sendMessage({
+      type: "popup/get-connection-settings",
+    });
   });
 }
 
@@ -855,6 +867,50 @@ export class ExtensionE2EHarness {
     return this.connections.map((entry) => entry.page);
   }
 
+  async ensureConnectionSettings() {
+    const expectedPort = this.socketServer.port;
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const response = await getConnectionSettingsFromPopup(this.popupPage);
+      if (
+        response?.ok === true &&
+        response.data?.primaryPort === expectedPort &&
+        Array.isArray(response.data?.fallbackPorts) &&
+        response.data.fallbackPorts.length === 0 &&
+        response.data.pointerMode === E2E_POINTER_MODE
+      ) {
+        return;
+      }
+
+      await setConnectionSettingsFromPopup(
+        this.popupPage,
+        expectedPort,
+        E2E_POINTER_MODE,
+      );
+
+      if (attempt < 3) {
+        await wait(250 * attempt);
+      }
+    }
+
+    const response = await getConnectionSettingsFromPopup(this.popupPage);
+    assert.equal(
+      response?.ok,
+      true,
+      `Failed to read E2E connection settings: ${response?.error ?? "unknown error"}`,
+    );
+    assert.equal(
+      response.data.primaryPort,
+      expectedPort,
+      `Expected E2E socket port ${expectedPort}, got ${response.data.primaryPort}`,
+    );
+    assert.equal(
+      response.data.pointerMode,
+      E2E_POINTER_MODE,
+      `Expected pointer mode ${E2E_POINTER_MODE}, got ${response.data.pointerMode}`,
+    );
+  }
+
   async openConnectedPage(label = "default") {
     const reusablePage = this.context
       .pages()
@@ -882,9 +938,14 @@ export class ExtensionE2EHarness {
   }
 
   async connectPage(page, url) {
+    await this.ensureConnectionSettings();
     const connectResponse = await connectTabFromPopupWithRetry(
       this.popupPage,
       url,
+      3,
+      async () => {
+        await this.ensureConnectionSettings();
+      },
     );
     assert.equal(
       connectResponse?.ok,
