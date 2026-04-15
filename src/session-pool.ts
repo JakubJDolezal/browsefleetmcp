@@ -80,6 +80,8 @@ type ActiveFocusTask = {
   startedAt: number;
 };
 
+type QueuedFocusTask = FocusTask<unknown>;
+
 function isOpen(session?: BrowserSession): boolean {
   return session?.ws?.readyState === WebSocket.OPEN;
 }
@@ -95,7 +97,7 @@ function parseSocketMessage(rawMessage: WebSocket.RawData): HeartbeatMessage | u
 export class SessionPool {
   private readonly sessions = new Map<string, BrowserSession>();
   private readonly clientLeases = new Map<string, string>();
-  private readonly focusQueue: FocusTask[] = [];
+  private readonly focusQueue: QueuedFocusTask[] = [];
   private activeFocusTask?: ActiveFocusTask;
   private lastFocusWaitDurationMs: number | null = null;
   private lastFocusHoldDurationMs: number | null = null;
@@ -200,7 +202,7 @@ export class SessionPool {
       timeoutMs: this.focusTaskTimeoutMs,
       now: this.now,
       enqueue: (entry) => {
-        this.focusQueue.push(entry);
+        this.focusQueue.push(entry as QueuedFocusTask);
         this.processNextFocusTask();
       },
     }, task);

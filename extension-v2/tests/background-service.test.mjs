@@ -167,6 +167,31 @@ test("BackgroundService batches repeated record persistence", async () => {
   ]);
 });
 
+test("BackgroundService can be constructed without a WebSocket global", () => {
+  const { chrome } = createChromeMock();
+  const originalWebSocket = globalThis.WebSocket;
+
+  try {
+    Object.defineProperty(globalThis, "WebSocket", {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
+
+    assert.doesNotThrow(() => {
+      new BackgroundService({
+        chromeApi: chrome,
+      });
+    });
+  } finally {
+    Object.defineProperty(globalThis, "WebSocket", {
+      configurable: true,
+      writable: true,
+      value: originalWebSocket,
+    });
+  }
+});
+
 test("BackgroundService stores normalized connection settings", async () => {
   const { chrome, setCalls } = createChromeMock();
   const service = new BackgroundService({

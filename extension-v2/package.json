@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/write-build-info.mjs && tsc -p tsconfig.json && node scripts/build-content-script.mjs",
-    "test": "npm run build && node --test tests/background-service.test.mjs tests/cdp.test.mjs tests/control-transport.test.mjs tests/focus-lock.test.mjs tests/offscreen.test.mjs tests/popup.test.mjs tests/runtime.test.mjs tests/session-controller.test.mjs tests/session-hub.test.mjs",
+    "test": "npm run build && node --test tests/background-service.test.mjs tests/cdp.test.mjs tests/content-hit-testing.test.mjs tests/control-transport.test.mjs tests/focus-lock.test.mjs tests/offscreen.test.mjs tests/popup.test.mjs tests/runtime.test.mjs tests/session-controller.test.mjs tests/session-hub.test.mjs",
     "test:e2e": "npm run build && node --test tests/e2e-single-session.test.mjs tests/e2e-background-actions.test.mjs tests/e2e-focus-required-actions.test.mjs tests/e2e-focus-lock.test.mjs",
     "test:full": "npm run test && npm run test:e2e"
   },

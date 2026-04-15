@@ -6,6 +6,22 @@ import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 
+function normalizePlaywrightModule(moduleNamespace) {
+  if (moduleNamespace?.chromium) {
+    return moduleNamespace;
+  }
+
+  if (moduleNamespace?.default?.chromium) {
+    return moduleNamespace.default;
+  }
+
+  if (moduleNamespace?.["module.exports"]?.chromium) {
+    return moduleNamespace["module.exports"];
+  }
+
+  return moduleNamespace;
+}
+
 async function fileExists(filePath) {
   try {
     await access(filePath);
@@ -15,7 +31,7 @@ async function fileExists(filePath) {
   }
 }
 
-async function findCachedPlaywrightIndex() {
+async function findCachedPlaywrightEntry() {
   const cacheRoots = [
     process.env.npm_config_cache,
     path.join(os.homedir(), ".npm"),
@@ -37,19 +53,21 @@ async function findCachedPlaywrightIndex() {
         continue;
       }
 
-      const indexPath = path.join(
-        npxRoot,
-        entry.name,
-        "node_modules",
-        "playwright",
-        "index.mjs",
-      );
-      if (!(await fileExists(indexPath))) {
-        continue;
-      }
+      for (const entryFile of ["index.js", "index.mjs"]) {
+        const indexPath = path.join(
+          npxRoot,
+          entry.name,
+          "node_modules",
+          "playwright",
+          entryFile,
+        );
+        if (!(await fileExists(indexPath))) {
+          continue;
+        }
 
-      const entryStat = await stat(indexPath);
-      candidates.push({ indexPath, mtimeMs: entryStat.mtimeMs });
+        const entryStat = await stat(indexPath);
+        candidates.push({ indexPath, mtimeMs: entryStat.mtimeMs });
+      }
     }
 
     candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
@@ -62,16 +80,22 @@ async function findCachedPlaywrightIndex() {
 export async function loadPlaywright() {
   const envPath = process.env.PLAYWRIGHT_PACKAGE_PATH;
   if (envPath) {
-    return await import(pathToFileURL(envPath).href);
+    return normalizePlaywrightModule(
+      await import(pathToFileURL(envPath).href),
+    );
   }
 
   try {
-    const resolved = require.resolve("playwright/index.mjs");
-    return await import(pathToFileURL(resolved).href);
+    const resolved = require.resolve("playwright");
+    return normalizePlaywrightModule(
+      await import(pathToFileURL(resolved).href),
+    );
   } catch {
-    const cachedIndex = await findCachedPlaywrightIndex();
+    const cachedIndex = await findCachedPlaywrightEntry();
     if (cachedIndex) {
-      return await import(pathToFileURL(cachedIndex).href);
+      return normalizePlaywrightModule(
+        await import(pathToFileURL(cachedIndex).href),
+      );
     }
   }
 
@@ -79,7 +103,7 @@ export async function loadPlaywright() {
     [
       "Unable to locate the Playwright package.",
       "Install it locally with `npm install -D playwright`,",
-      "or set PLAYWRIGHT_PACKAGE_PATH to a playwright/index.mjs file.",
+      "or set PLAYWRIGHT_PACKAGE_PATH to the Playwright entry file.",
     ].join(" "),
   );
 }

@@ -17,17 +17,23 @@ import {
 } from "./transport-shared.js";
 
 type BackgroundRequester = <T>(message: BackgroundRequest) => Promise<T>;
+type WebSocketClass = typeof WebSocket;
 
 type ExtensionControlTransportOptions = {
   requestBackground: BackgroundRequester;
   getConnectionSettings?: () => Promise<ConnectionSettings>;
-  webSocketClass?: typeof WebSocket;
+  webSocketClass?: WebSocketClass;
   setTimeout?: typeof globalThis.setTimeout;
   clearTimeout?: typeof globalThis.clearTimeout;
   setInterval?: typeof globalThis.setInterval;
   clearInterval?: typeof globalThis.clearInterval;
   random?: () => number;
 };
+
+function getGlobalWebSocketClass(): WebSocketClass | undefined {
+  return (globalThis as typeof globalThis & { WebSocket?: WebSocketClass })
+    .WebSocket;
+}
 
 function createControlSocketUrl(
   port: number,
@@ -76,7 +82,7 @@ function createControlSocketUrl(
 }
 
 export class ExtensionControlTransport {
-  private readonly webSocketClass: typeof WebSocket;
+  private readonly webSocketClass?: WebSocketClass;
   private readonly setTimeoutFn: typeof globalThis.setTimeout;
   private readonly clearTimeoutFn: typeof globalThis.clearTimeout;
   private readonly setIntervalFn: typeof globalThis.setInterval;
@@ -92,7 +98,7 @@ export class ExtensionControlTransport {
   private disposed = false;
 
   constructor(private readonly options: ExtensionControlTransportOptions) {
-    this.webSocketClass = options.webSocketClass ?? WebSocket;
+    this.webSocketClass = options.webSocketClass;
     this.setTimeoutFn = options.setTimeout ?? globalThis.setTimeout.bind(globalThis);
     this.clearTimeoutFn =
       options.clearTimeout ?? globalThis.clearTimeout.bind(globalThis);
@@ -108,9 +114,10 @@ export class ExtensionControlTransport {
       return;
     }
 
+    const webSocketClass = this.resolveWebSocketClass();
     if (this.socket) {
-      const openState = this.webSocketClass.OPEN;
-      const connectingState = this.webSocketClass.CONNECTING;
+      const openState = webSocketClass.OPEN;
+      const connectingState = webSocketClass.CONNECTING;
       if (
         this.socket.readyState === openState ||
         this.socket.readyState === connectingState
@@ -141,10 +148,12 @@ export class ExtensionControlTransport {
 
     const socket = this.socket;
     this.socket = undefined;
+    const webSocketClass = this.webSocketClass ?? getGlobalWebSocketClass();
     if (
       socket &&
-      (socket.readyState === this.webSocketClass.OPEN ||
-        socket.readyState === this.webSocketClass.CONNECTING)
+      webSocketClass &&
+      (socket.readyState === webSocketClass.OPEN ||
+        socket.readyState === webSocketClass.CONNECTING)
     ) {
       socket.close();
     }
@@ -267,7 +276,10 @@ export class ExtensionControlTransport {
       error = errorMessage(caughtError);
     }
 
-    if (socket !== this.socket || socket.readyState !== this.webSocketClass.OPEN) {
+    if (
+      socket !== this.socket ||
+      socket.readyState !== this.resolveWebSocketClass().OPEN
+    ) {
       return;
     }
 
@@ -332,9 +344,10 @@ export class ExtensionControlTransport {
     settings: ConnectionSettings,
   ): Promise<WebSocket> {
     const socketUrl = createControlSocketUrl(port, settings);
+    const webSocketClass = this.resolveWebSocketClass();
 
     return await new Promise<WebSocket>((resolve, reject) => {
-      const socket = new this.webSocketClass(socketUrl);
+      const socket = new webSocketClass(socketUrl);
       const connectTimeoutId = this.setTimeoutFn(() => {
         cleanup();
         try {
@@ -390,7 +403,10 @@ export class ExtensionControlTransport {
   }
 
   private sendHeartbeat(socket: WebSocket): void {
-    if (socket !== this.socket || socket.readyState !== this.webSocketClass.OPEN) {
+    if (
+      socket !== this.socket ||
+      socket.readyState !== this.resolveWebSocketClass().OPEN
+    ) {
       this.clearHeartbeatTimers();
       return;
     }
@@ -418,6 +434,15 @@ export class ExtensionControlTransport {
         },
       }),
     );
+  }
+
+  private resolveWebSocketClass(): WebSocketClass {
+    const webSocketClass = this.webSocketClass ?? getGlobalWebSocketClass();
+    if (!webSocketClass) {
+      throw new Error("WebSocket is not available in this runtime.");
+    }
+
+    return webSocketClass;
   }
 
   private handleHeartbeatAck(requestId?: string): void {
