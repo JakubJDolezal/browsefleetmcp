@@ -606,6 +606,28 @@ async function connectTabFromPopup(popupPage, targetUrl) {
   }, targetUrl);
 }
 
+async function connectTabFromPopupWithRetry(
+  popupPage,
+  targetUrl,
+  maxAttempts = 3,
+) {
+  let lastResponse;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await connectTabFromPopup(popupPage, targetUrl);
+    if (response?.ok === true && response.data?.sessionId) {
+      return response;
+    }
+
+    lastResponse = response;
+    if (attempt < maxAttempts) {
+      await wait(250 * attempt);
+    }
+  }
+
+  return lastResponse;
+}
+
 async function listSessionsFromPopup(popupPage) {
   return await popupPage.evaluate(async () => {
     return await chrome.runtime.sendMessage({ type: "popup/list-sessions" });
@@ -860,8 +882,15 @@ export class ExtensionE2EHarness {
   }
 
   async connectPage(page, url) {
-    const connectResponse = await connectTabFromPopup(this.popupPage, url);
-    assert.equal(connectResponse.ok, true);
+    const connectResponse = await connectTabFromPopupWithRetry(
+      this.popupPage,
+      url,
+    );
+    assert.equal(
+      connectResponse?.ok,
+      true,
+      `Failed to connect ${url}: ${connectResponse?.error ?? "unknown error"}`,
+    );
 
     const connection = await this.socketServer.waitForSession(
       connectResponse.data.sessionId,
