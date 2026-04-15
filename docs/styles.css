@@ -110,6 +110,53 @@ footer {
   color: #ffffff;
 }
 
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 2.55rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.22));
+}
+
+.brand-mark {
+  height: 2.3rem;
+  width: 2.3rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.42rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .brand-logo {
+    height: 2.85rem;
+  }
+
+  .brand-copy {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+}
+
 .eyebrow {
   margin: 0 0 0.85rem;
   color: rgba(66, 197, 192, 0.9);

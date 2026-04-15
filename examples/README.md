@@ -9,6 +9,7 @@ Published package examples:
 - `codex/config.toml`
 - `cursor/mcp.json`
 - `claude-code/mcp.json`
+- `skills/browsefleetmcp/SKILL.md`
 - `generic/stdio.json`
 - `generic/stdio.windows.json`
 - `cli/basic.txt`
@@ -38,3 +39,5 @@ Important:
 - Replace `/absolute/path/to/browsefleetmcp/dist/index.js` with the real absolute path on your machine.
 
 Claude Desktop is handled differently. For that client, package the repo as an `.mcpb` bundle using the root `manifest.json` and `.mcpbignore`.
+
+Codex users can also drop the skill folder at `skills/browsefleetmcp/` into `~/.codex/skills/` if they want the agent to understand the BrowseFleet-specific session and recovery workflow.

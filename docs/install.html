@@ -36,7 +36,7 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="icon" href="data:," />
+    <link rel="icon" type="image/svg+xml" href="./assets/fleet-mark.svg" />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
@@ -69,9 +69,13 @@
     <div class="relative overflow-hidden">
       <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
         <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
-            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
-            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          <a href="./index.html" class="brand-link text-white no-underline">
+            <img
+              src="./assets/browsefleet-logo.svg"
+              alt="BrowseFleetMCP"
+              class="brand-logo"
+            />
+            <span class="soft-label hidden lg:inline-block">Real Chrome, local control</span>
           </a>
           <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
             <a data-nav-link class="nav-link" href="./index.html">Overview</a>
@@ -79,6 +83,7 @@
             <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
             <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
             <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a data-nav-link class="nav-link" href="./skill.html">Skill</a>
             <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
           </nav>
         </div>
@@ -228,6 +233,58 @@ browsefleetmcp --broker-port 9300 --broker-fallback-ports 9302,9304</code></pre>
               <pre id="install-auth-snippet"><code>browsefleetmcp --auth-token your-shared-token
 
 BROWSEFLEETMCP_AUTH_TOKEN=your-shared-token browsefleetmcp</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-8 sm:py-10">
+          <div class="mx-auto max-w-7xl px-6">
+            <p class="eyebrow">Step 3</p>
+            <h2 class="max-w-3xl text-4xl font-bold leading-none tracking-[-0.06em] text-white sm:text-5xl">
+              Point your actual client at the server.
+            </h2>
+            <p class="mt-5 max-w-3xl text-base leading-8 text-white/66">
+              Once the extension is loaded and the local server command is clear, the next
+              step is just the launcher shape for your MCP host. The copy-ready versions
+              live on the client page.
+            </p>
+            <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              <a class="route-link p-6 no-underline" href="./clients.html">
+                <p class="soft-label">Codex</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  <code>codex mcp add</code> or <code>config.toml</code>
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  CLI install plus direct config examples.
+                </p>
+              </a>
+              <a class="route-link p-6 no-underline" href="./clients.html">
+                <p class="soft-label">Cursor</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  <code>~/.cursor/mcp.json</code>
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  Published-package and local-checkout JSON blocks.
+                </p>
+              </a>
+              <a class="route-link p-6 no-underline" href="./clients.html">
+                <p class="soft-label">Claude Code</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  CLI add or project <code>.mcp.json</code>
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  User-level and checked-in setup paths.
+                </p>
+              </a>
+              <a class="route-link p-6 no-underline" href="./claude-desktop.html">
+                <p class="soft-label">Claude Desktop</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  Bundle the repo as an <code>.mcpb</code>
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  Desktop-native install route for packaged local tools.
+                </p>
+              </a>
             </div>
           </div>
         </section>

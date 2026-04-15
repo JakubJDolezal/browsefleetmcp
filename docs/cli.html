@@ -33,7 +33,7 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="icon" href="data:," />
+    <link rel="icon" type="image/svg+xml" href="./assets/fleet-mark.svg" />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
@@ -66,9 +66,13 @@
     <div class="relative overflow-hidden">
       <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
         <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
-            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
-            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          <a href="./index.html" class="brand-link text-white no-underline">
+            <img
+              src="./assets/browsefleet-logo.svg"
+              alt="BrowseFleetMCP"
+              class="brand-logo"
+            />
+            <span class="soft-label hidden lg:inline-block">Real Chrome, local control</span>
           </a>
           <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
             <a data-nav-link class="nav-link" href="./index.html">Overview</a>
@@ -76,6 +80,7 @@
             <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
             <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
             <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a data-nav-link class="nav-link" href="./skill.html">Skill</a>
             <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
           </nav>
         </div>
@@ -184,6 +189,29 @@ browsefleetmcp \
               <pre id="cli-auth-snippet"><code>browsefleetmcp --auth-token your-shared-token
 
 BROWSEFLEETMCP_AUTH_TOKEN=your-shared-token browsefleetmcp</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 xl:grid-cols-2">
+            <article class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Operational commands</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Check health, create sessions, reload the extension, and clean up from the shell.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-white/66">
+                The CLI is not just a launcher. It also exposes the same operational hooks
+                the MCP surface uses for session creation and recovery.
+              </p>
+            </article>
+            <div class="code-window">
+              <button class="copy-button" data-copy-target="cli-ops-snippet">Copy</button>
+              <pre id="cli-ops-snippet"><code>browsefleetmcp health
+browsefleetmcp create-session --url https://example.com --label "Docs Search"
+browsefleetmcp destroy-session --session-id &lt;session-id&gt;
+browsefleetmcp reload-extension
+browsefleetmcp restart-transport</code></pre>
             </div>
           </div>
         </section>

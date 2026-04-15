@@ -33,7 +33,7 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="icon" href="data:," />
+    <link rel="icon" type="image/svg+xml" href="./assets/fleet-mark.svg" />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
@@ -73,9 +73,13 @@
 
       <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
         <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
-            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
-            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          <a href="./index.html" class="brand-link text-white no-underline">
+            <img
+              src="./assets/browsefleet-logo.svg"
+              alt="BrowseFleetMCP"
+              class="brand-logo"
+            />
+            <span class="soft-label hidden lg:inline-block">Real Chrome, local control</span>
           </a>
           <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
             <a data-nav-link class="nav-link" href="./index.html">Overview</a>
@@ -83,6 +87,7 @@
             <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
             <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
             <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a data-nav-link class="nav-link" href="./skill.html">Skill</a>
             <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
           </nav>
         </div>
@@ -107,6 +112,10 @@
                 BrowseFleetMCP runs a local stdio MCP server, pairs it with a Chrome
                 extension, and keeps sessions isolated so multiple tools can work without
                 fighting over the same browser state.
+              </p>
+              <p class="mt-4 max-w-2xl text-base leading-8 text-white/58">
+                It was inspired by BrowserMCP, but built out of not wanting the browser
+                side to silently die in the background and leave automation hanging.
               </p>
               <p class="mt-4 max-w-2xl text-base leading-8 text-white/58">
                 The extension lives in this repo checkout. The server can come either from
@@ -218,7 +227,7 @@
               </p>
             </div>
 
-            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
               <a href="./install.html" class="route-link p-6 no-underline">
                 <p class="soft-label">Install</p>
                 <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
@@ -256,6 +265,16 @@
                 </h3>
                 <p class="mt-4 text-base leading-8 text-white/64">
                   Desktop-native install route for users who do not want to hand-edit JSON.
+                </p>
+              </a>
+
+              <a href="./skill.html" class="route-link p-6 no-underline">
+                <p class="soft-label">Skill</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  Drop in a Codex skill that teaches the agent how BrowseFleetMCP works.
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/64">
+                  Copy the folder into <code>~/.codex/skills</code> and keep the workflow close to the tool.
                 </p>
               </a>
             </div>
@@ -378,6 +397,12 @@ browsefleetmcp --auth-token your-shared-token</code></pre>
                     class="inline-flex items-center justify-center rounded-full border border-black/12 bg-black/5 px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-[#11161c] no-underline transition hover:-translate-y-0.5"
                   >
                     Repo examples
+                  </a>
+                  <a
+                    href="./skill.html"
+                    class="inline-flex items-center justify-center rounded-full border border-black/12 bg-black/5 px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-[#11161c] no-underline transition hover:-translate-y-0.5"
+                  >
+                    Open skill
                   </a>
                 </div>
               </div>

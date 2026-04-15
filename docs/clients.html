@@ -36,7 +36,7 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="icon" href="data:," />
+    <link rel="icon" type="image/svg+xml" href="./assets/fleet-mark.svg" />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
@@ -69,9 +69,13 @@
     <div class="relative overflow-hidden">
       <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
         <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
-            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
-            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          <a href="./index.html" class="brand-link text-white no-underline">
+            <img
+              src="./assets/browsefleet-logo.svg"
+              alt="BrowseFleetMCP"
+              class="brand-logo"
+            />
+            <span class="soft-label hidden lg:inline-block">Real Chrome, local control</span>
           </a>
           <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
             <a data-nav-link class="nav-link" href="./index.html">Overview</a>
@@ -79,6 +83,7 @@
             <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
             <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
             <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a data-nav-link class="nav-link" href="./skill.html">Skill</a>
             <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
           </nav>
         </div>
@@ -121,43 +126,66 @@
 
         <section data-reveal class="py-6 sm:py-8">
           <div class="mx-auto max-w-7xl px-6">
-            <div class="grid gap-6 xl:grid-cols-2">
-              <article class="surface-panel grid gap-6 p-7 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div class="grid gap-6">
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
                 <div>
                   <p class="eyebrow">Codex</p>
                   <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
-                    CLI install or direct <code>config.toml</code>.
+                    Add it from the CLI or paste it into <code>~/.codex/config.toml</code>.
                   </h2>
                   <p class="mt-5 text-base leading-8 text-white/66">
-                    Codex supports both <code>codex mcp add</code> and direct edits to
-                    <code>~/.codex/config.toml</code>. The same MCP config is shared
-                    between the CLI and the IDE integration.
+                    Codex supports both flows. Use <code>codex mcp add</code> when you want
+                    the fastest install. Use <code>config.toml</code> when you want the
+                    launcher committed, reviewed, or manually edited.
+                  </p>
+                  <p class="mt-4 text-base leading-8 text-white/58">
+                    If you are actively developing this repo, switch the command to
+                    <code>node /absolute/path/to/browsefleetmcp/dist/index.js</code> so
+                    Codex runs your local build instead of the published package.
                   </p>
                 </div>
-                <div class="code-window">
-                  <button class="copy-button" data-copy-target="clients-codex-snippet">Copy</button>
-                  <pre id="clients-codex-snippet"><code>codex mcp add browsefleet -- npx -y browsefleetmcp
+                <div class="grid gap-6">
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="clients-codex-command">Copy</button>
+                    <pre id="clients-codex-command"><code>codex mcp add browsefleet -- npx -y browsefleetmcp
 
+codex mcp list</code></pre>
+                  </div>
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="clients-codex-config">Copy</button>
+                    <pre id="clients-codex-config"><code># ~/.codex/config.toml
 [mcp_servers.browsefleet]
 command = "npx"
-args = ["-y", "browsefleetmcp"]</code></pre>
+args = ["-y", "browsefleetmcp"]
+
+# local checkout variant
+[mcp_servers.browsefleet]
+command = "node"
+args = ["/absolute/path/to/browsefleetmcp/dist/index.js"]</code></pre>
+                  </div>
                 </div>
               </article>
 
-              <article class="surface-panel grid gap-6 p-7 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
                 <div>
                   <p class="eyebrow">Cursor</p>
                   <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
-                    Drop the launcher into <code>~/.cursor/mcp.json</code>.
+                    Put the launcher in <code>~/.cursor/mcp.json</code> and restart Cursor.
                   </h2>
                   <p class="mt-5 text-base leading-8 text-white/66">
-                    Cursor expects the config file directly. Save it, then restart the app
-                    so the MCP server list refreshes.
+                    Cursor wants the config file directly. The JSON shape is standard MCP
+                    stdio: <code>command</code> plus <code>args</code>.
+                  </p>
+                  <p class="mt-4 text-base leading-8 text-white/58">
+                    Use the published package when you want npm-managed updates. Use the
+                    local checkout variant when you want Cursor to launch the build from
+                    this repo.
                   </p>
                 </div>
-                <div class="code-window">
-                  <button class="copy-button" data-copy-target="clients-cursor-snippet">Copy</button>
-                  <pre id="clients-cursor-snippet"><code>{
+                <div class="grid gap-6">
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="clients-cursor-published">Copy</button>
+                    <pre id="clients-cursor-published"><code>{
   "mcpServers": {
     "browsefleet": {
       "command": "npx",
@@ -165,52 +193,64 @@ args = ["-y", "browsefleetmcp"]</code></pre>
     }
   }
 }</code></pre>
+                  </div>
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="clients-cursor-local">Copy</button>
+                    <pre id="clients-cursor-local"><code>{
+  "mcpServers": {
+    "browsefleet": {
+      "command": "node",
+      "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
+    }
+  }
+}</code></pre>
+                  </div>
                 </div>
               </article>
 
-              <article class="surface-panel grid gap-6 p-7 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
                 <div>
                   <p class="eyebrow">Claude Code</p>
                   <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
-                    CLI setup or project-scoped <code>.mcp.json</code>.
+                    Use <code>claude mcp add</code> or commit a project-scoped <code>.mcp.json</code>.
                   </h2>
                   <p class="mt-5 text-base leading-8 text-white/66">
-                    Use the CLI when you want user-level setup. Use
-                    <code>--scope project</code> if the config should live alongside the repo.
+                    The user-level CLI install is the fastest path. If the config should
+                    travel with a repo, use <code>--scope project</code> or drop the same
+                    JSON into a checked-in <code>.mcp.json</code>.
+                  </p>
+                  <p class="mt-4 text-base leading-8 text-white/58">
+                    Claude Desktop is different. It uses the bundle route covered on the
+                    separate <a class="underline decoration-white/20 underline-offset-4" href="./claude-desktop.html">Claude Desktop page</a>.
                   </p>
                 </div>
-                <div class="code-window">
-                  <button class="copy-button" data-copy-target="clients-claude-code-snippet">Copy</button>
-                  <pre id="clients-claude-code-snippet"><code>claude mcp add --transport stdio browsefleet -- npx -y browsefleetmcp
+                <div class="grid gap-6">
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="clients-claude-command">Copy</button>
+                    <pre id="clients-claude-command"><code>claude mcp add --transport stdio browsefleet -- npx -y browsefleetmcp
+
+claude mcp add --transport stdio --scope project browsefleet -- npx -y browsefleetmcp</code></pre>
+                  </div>
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="clients-claude-config">Copy</button>
+                    <pre id="clients-claude-config"><code>{
+  "mcpServers": {
+    "browsefleet": {
+      "command": "npx",
+      "args": ["-y", "browsefleetmcp"]
+    }
+  }
+}
 
 {
   "mcpServers": {
     "browsefleet": {
-      "command": "npx",
-      "args": ["-y", "browsefleetmcp"]
+      "command": "node",
+      "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
     }
   }
 }</code></pre>
-                </div>
-              </article>
-
-              <article class="surface-panel grid gap-6 p-7 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                <div>
-                  <p class="eyebrow">Generic stdio</p>
-                  <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
-                    Any client that accepts <code>command</code> and <code>args</code>.
-                  </h2>
-                  <p class="mt-5 text-base leading-8 text-white/66">
-                    If the client can spawn a local process over stdio, BrowseFleetMCP fits
-                    the standard model.
-                  </p>
-                </div>
-                <div class="code-window">
-                  <button class="copy-button" data-copy-target="clients-generic-snippet">Copy</button>
-                  <pre id="clients-generic-snippet"><code>{
-  "command": "npx",
-  "args": ["-y", "browsefleetmcp"]
-}</code></pre>
+                  </div>
                 </div>
               </article>
             </div>
@@ -219,25 +259,39 @@ args = ["-y", "browsefleetmcp"]</code></pre>
 
         <section data-reveal class="py-10 sm:py-12">
           <div class="mx-auto max-w-7xl px-6">
-            <div class="warm-panel grid gap-8 p-8 sm:p-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-start">
+            <div class="warm-panel grid gap-8 p-8 sm:p-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
               <div>
-                <p class="eyebrow !text-[#8d4f2f]">Windows note</p>
+                <p class="eyebrow !text-[#8d4f2f]">Generic and Windows</p>
                 <h2 class="text-4xl font-bold leading-none tracking-[-0.06em] sm:text-5xl">
-                  Some Windows-native clients need <code>cmd /c</code> in front of <code>npx</code>.
+                  Any stdio MCP host works. Windows sometimes needs <code>cmd /c</code>.
                 </h2>
                 <p class="mt-5 max-w-xl text-base leading-8 text-black/68">
-                  This only matters when the client cannot directly spawn the package manager
-                  shim. If it can, the normal <code>npx -y browsefleetmcp</code> entrypoint
-                  is still the simplest route.
+                  The launcher contract never changes: a local command plus arguments. The
+                  only platform wrinkle is that some Windows-native clients cannot spawn
+                  the <code>npx</code> shim directly.
                 </p>
               </div>
 
-              <div class="code-window">
-                <button class="copy-button" data-copy-target="clients-windows-snippet">Copy</button>
-                <pre id="clients-windows-snippet"><code>{
+              <div class="grid gap-6">
+                <div class="code-window">
+                  <button class="copy-button" data-copy-target="clients-generic-snippet">Copy</button>
+                  <pre id="clients-generic-snippet"><code>{
+  "command": "npx",
+  "args": ["-y", "browsefleetmcp"]
+}
+
+{
+  "command": "node",
+  "args": ["/absolute/path/to/browsefleetmcp/dist/index.js"]
+}</code></pre>
+                </div>
+                <div class="code-window">
+                  <button class="copy-button" data-copy-target="clients-windows-snippet">Copy</button>
+                  <pre id="clients-windows-snippet"><code>{
   "command": "cmd",
   "args": ["/c", "npx", "-y", "browsefleetmcp"]
 }</code></pre>
+                </div>
               </div>
             </div>
           </div>
@@ -249,7 +303,7 @@ args = ["-y", "browsefleetmcp"]</code></pre>
             <h2 class="max-w-3xl text-4xl font-bold leading-none tracking-[-0.06em] text-white sm:text-5xl">
               Copy from the repo if you do not want to transcribe snippets by hand.
             </h2>
-            <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
               <a
                 class="route-link p-6 no-underline"
                 href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/codex"
@@ -294,6 +348,48 @@ args = ["-y", "browsefleetmcp"]</code></pre>
                   Generic command-plus-args shapes for other MCP hosts.
                 </p>
               </a>
+              <a
+                class="route-link p-6 no-underline"
+                href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples/skills/browsefleetmcp"
+              >
+                <p class="soft-label">Codex skill</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  examples/skills/
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/62">
+                  Drop-in Codex skill folder that teaches the agent how to use BrowseFleetMCP.
+                </p>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-8 sm:py-10">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="surface-panel grid gap-8 p-8 sm:p-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-start">
+              <div>
+                <p class="eyebrow">Codex skill</p>
+                <h2 class="text-4xl font-bold leading-none tracking-[-0.06em] text-white sm:text-5xl">
+                  Want the agent to understand BrowseFleet without re-explaining the workflow?
+                </h2>
+                <p class="mt-5 max-w-2xl text-base leading-8 text-white/66">
+                  There is now a drop-in skill folder in the repo. It teaches Codex to
+                  start with <code>browser_health</code>, treat sessions explicitly, prefer
+                  BrowseFleet tools over fallback browser tooling, and use the right
+                  recovery commands when the extension or transport looks stale.
+                </p>
+                <a
+                  href="./skill.html"
+                  class="mt-6 inline-flex items-center justify-center rounded-full bg-fleet-cyan px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-slate-950 no-underline transition hover:-translate-y-0.5"
+                >
+                  Open skill page
+                </a>
+              </div>
+              <div class="code-window">
+                <button class="copy-button" data-copy-target="clients-skill-install">Copy</button>
+                <pre id="clients-skill-install"><code>mkdir -p ~/.codex/skills
+cp -R /absolute/path/to/browsefleetmcp/examples/skills/browsefleetmcp ~/.codex/skills/</code></pre>
+              </div>
             </div>
           </div>
         </section>

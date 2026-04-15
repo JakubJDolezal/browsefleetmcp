@@ -39,7 +39,7 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="icon" href="data:," />
+    <link rel="icon" type="image/svg+xml" href="./assets/fleet-mark.svg" />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
@@ -72,9 +72,13 @@
     <div class="relative overflow-hidden">
       <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
         <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <a href="./index.html" class="inline-flex items-baseline gap-3 text-white no-underline">
-            <span class="text-lg font-bold tracking-[-0.04em]">BrowseFleetMCP</span>
-            <span class="soft-label hidden sm:inline-block">Real Chrome, local control</span>
+          <a href="./index.html" class="brand-link text-white no-underline">
+            <img
+              src="./assets/browsefleet-logo.svg"
+              alt="BrowseFleetMCP"
+              class="brand-logo"
+            />
+            <span class="soft-label hidden lg:inline-block">Real Chrome, local control</span>
           </a>
           <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
             <a data-nav-link class="nav-link" href="./index.html">Overview</a>
@@ -82,6 +86,7 @@
             <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
             <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
             <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a data-nav-link class="nav-link" href="./skill.html">Skill</a>
             <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
           </nav>
         </div>
@@ -218,7 +223,7 @@ mcpb pack</code></pre>
 
         <div data-reveal class="mx-auto grid max-w-7xl gap-4 px-6 pt-2 md:grid-cols-2">
           <a class="pager-link" href="./cli.html">Previous: CLI</a>
-          <a class="pager-link" href="./index.html">Back to overview</a>
+          <a class="pager-link" href="./skill.html">Next: skill</a>
         </div>
       </main>
 
