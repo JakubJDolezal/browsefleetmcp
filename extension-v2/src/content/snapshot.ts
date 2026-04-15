@@ -26,6 +26,22 @@ const ATTRIBUTE_CANDIDATES = [
   "aria-label",
 ];
 
+const STRUCTURAL_ROLES = new Set([
+  "banner",
+  "contentinfo",
+  "generic",
+  "group",
+  "list",
+  "listitem",
+  "main",
+  "navigation",
+  "none",
+  "presentation",
+  "region",
+  "separator",
+  "tablist",
+]);
+
 function quoted(value: string): string {
   return JSON.stringify(value);
 }
@@ -166,11 +182,49 @@ function getRole(element: HTMLElement): string {
   }
 }
 
-function normalizeText(text: string | null | undefined): string {
-  return (text ?? "").replace(/\s+/g, " ").trim();
+export function normalizeText(text: unknown): string {
+  if (typeof text === "string") {
+    return text.replace(/\s+/g, " ").trim();
+  }
+
+  if (
+    typeof text === "number" ||
+    typeof text === "boolean" ||
+    typeof text === "bigint"
+  ) {
+    return String(text).replace(/\s+/g, " ").trim();
+  }
+
+  return "";
 }
 
-function getName(element: HTMLElement): string {
+export function isProbablyNoiseText(text: string): boolean {
+  return (
+    text.length >= 120 &&
+    ((text.includes("{") &&
+      text.includes("}") &&
+      text.includes(":") &&
+      text.includes(";")) ||
+      /(^|[\s(])@(?:media|supports|keyframes)\b/.test(text) ||
+      /(^|[\s(])[.#][-\w]+(?:__[-\w]+)?\s*[{,:]/.test(text) ||
+      /\bfunction\b(?:\s+[$\w]+)?\s*\(/.test(text))
+  );
+}
+
+export function shouldUseTextFallback(role: string, text: string): boolean {
+  const normalized = normalizeText(text);
+  if (!normalized || isProbablyNoiseText(normalized)) {
+    return false;
+  }
+
+  if (STRUCTURAL_ROLES.has(role) && normalized.length > 160) {
+    return false;
+  }
+
+  return true;
+}
+
+function getName(element: HTMLElement, role: string): string {
   const labelledBy = element.getAttribute("aria-labelledby");
   if (labelledBy) {
     const labelText = labelledBy
@@ -184,18 +238,24 @@ function getName(element: HTMLElement): string {
   }
 
   const candidates = [
-    element.getAttribute("aria-label"),
-    element.getAttribute("alt"),
-    element.getAttribute("title"),
-    (element as HTMLInputElement).placeholder,
-    (element as HTMLInputElement).value,
-    element.innerText,
-    element.textContent,
+    { value: element.getAttribute("aria-label"), source: "explicit" },
+    { value: element.getAttribute("alt"), source: "explicit" },
+    { value: element.getAttribute("title"), source: "explicit" },
+    { value: (element as HTMLInputElement).placeholder, source: "field" },
+    { value: (element as HTMLInputElement).value, source: "field" },
+    { value: element.innerText, source: "text" },
+    { value: element.textContent, source: "text" },
   ];
 
   for (const candidate of candidates) {
-    const normalized = normalizeText(candidate);
+    const normalized = normalizeText(candidate.value);
     if (normalized) {
+      if (
+        candidate.source === "text" &&
+        !shouldUseTextFallback(role, normalized)
+      ) {
+        continue;
+      }
       return normalized;
     }
   }
@@ -252,7 +312,7 @@ export function generateAriaSnapshot(): string {
     state.refs.set(ref, selector);
 
     const role = getRole(element);
-    const name = getName(element);
+    const name = getName(element, role);
     const disabled =
       element instanceof HTMLButtonElement ||
       element instanceof HTMLInputElement ||

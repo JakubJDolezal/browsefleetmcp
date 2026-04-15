@@ -143,6 +143,9 @@ function createPageOneHtml(origin, label = "default") {
       <span id="select-status">red</span>
     </div>
     <div class="row">
+      <progress id="sync-progress" role="progressbar" value="70" max="100"></progress>
+    </div>
+    <div class="row">
       <div id="hover-target" role="button" aria-label="Hover target">Hover target</div>
       <span id="hover-status">not hovered</span>
     </div>

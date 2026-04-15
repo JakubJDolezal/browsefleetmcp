@@ -22,6 +22,9 @@ test(
       assert.equal(await socketClient.request("getTitle", {}), "Page One");
       assert.equal(await socketClient.request("getUrl", {}), `${harness.origin}/page1`);
 
+      const initialSnapshot = await socketClient.request("browser_snapshot", {});
+      assert.match(initialSnapshot, /- progressbar "70" \[ref=/);
+
       const {
         incrementRef,
         inputRef,
