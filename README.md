@@ -4,9 +4,9 @@
   <img src=".github/images/browsefleetmcp-logo.svg" alt="BrowseFleetMCP" width="420" />
 </p>
 
-BrowseFleetMCP is a local MCP server plus a Chrome extension for driving your real, already-logged-in browser without collapsing everything into one shared tab.
+BrowseFleetMCP solves the focus problem in parallel browser automation: multiple agents need to click and type in real logged-in sites, but a normal shared browser has only one active tab and window.
 
-It was built for agent workflows where multiple clients need separate browser sessions, real screenshots, and a browser side that stays alive instead of silently dying in the background. It was inspired by BrowserMCP, but the focus here is multi-session control, local reliability, and making the moving parts inspectable.
+It runs as a local MCP server plus a Chromium-extension-compatible browser extension. Each MCP client gets a separate real browser session in its own window, and focus-sensitive actions are serialized so agents do not steal focus from each other mid-click or mid-type. It was inspired by BrowserMCP, but the focus here is multi-session control, local reliability, real screenshots, and making the moving parts inspectable.
 
 Docs: https://jakubjdolezal.github.io/browsefleetmcp/
 
