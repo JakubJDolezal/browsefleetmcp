@@ -108,6 +108,23 @@ test(
       const consoleLogs = await socketClient.request("browser_get_console_logs", {});
       assert.ok(Array.isArray(consoleLogs));
 
+      step = "single-session product card extraction";
+      const productCards = await socketClient.request(
+        "browser_extract_product_cards",
+        { query: "Door handle", maxCards: 5 },
+      );
+      assert.ok(
+        productCards.cards.some(
+          (card) =>
+            card.title.includes("Door handle set") &&
+            card.titleRef &&
+            card.hrefRef &&
+            card.href === `${harness.origin}/page2?product=P-01298241` &&
+            card.article === "P-01298241" &&
+            card.actionRefs.some((action) => action.label === "View 1 Article"),
+        ),
+      );
+
       step = "single-session click navigation link";
       await socketClient.request("browser_click", { ref: linkRef });
       await page.waitForURL(`${harness.origin}/page2`);

@@ -8,6 +8,7 @@ import { SessionTransportHub } from "../offscreen/session-hub.js";
 import { errorMessage, waitForTabComplete } from "./runtime.js";
 import {
   BACKGROUND_BRIDGE_PORT_NAME,
+  type BrowserTabInfo,
   type BackgroundRequest,
   CONNECTION_SETTINGS_STORAGE_KEY,
   type ConnectionSettings,
@@ -320,6 +321,32 @@ export class BackgroundService {
     );
   }
 
+  private async listTabs(): Promise<BrowserTabInfo[]> {
+    await this.pruneStaleSessions();
+    const tabs = await this.chromeApi.tabs.query({});
+    return tabs
+      .filter((tab: any) => typeof tab.id === "number")
+      .map((tab: any) => {
+        const session = this.findSessionByTabId(tab.id);
+        return {
+          tabId: tab.id,
+          windowId: tab.windowId ?? -1,
+          title: tab.title ?? "Untitled",
+          url: tab.url ?? "",
+          active: Boolean(tab.active),
+          sessionId: session?.sessionId,
+          sessionStatus: session?.status,
+          label: session?.label,
+        };
+      })
+      .sort((left: BrowserTabInfo, right: BrowserTabInfo) => {
+        if (left.windowId !== right.windowId) {
+          return left.windowId - right.windowId;
+        }
+        return left.tabId - right.tabId;
+      });
+  }
+
   private async getCurrentTabInfo(): Promise<CurrentTabInfo> {
     const tabs = await this.chromeApi.tabs.query({
       active: true,
@@ -579,6 +606,17 @@ export class BackgroundService {
       );
     }
 
+    const expectedBuiltAt = this.serverMetadata?.expectedExtensionBuiltAt;
+    if (
+      expectedBuiltAt &&
+      EXTENSION_BUILD_TIMESTAMP &&
+      expectedBuiltAt !== EXTENSION_BUILD_TIMESTAMP
+    ) {
+      warnings.push(
+        `Extension build mismatch: loaded extension was built at "${EXTENSION_BUILD_TIMESTAMP}" but the connected server expects "${expectedBuiltAt}".`,
+      );
+    }
+
     return warnings;
   }
 
@@ -736,6 +774,13 @@ export class BackgroundService {
         return await this.reloadExtension();
       case "background/prune-sessions":
         return await this.pruneStaleSessions();
+      case "background/list-tabs":
+        return await this.listTabs();
+      case "background/connect-tab":
+        return await this.connectTab(
+          runtimeMessage.payload.tabId,
+          runtimeMessage.payload.label,
+        );
       case "background/get-session-setup":
         return await this.getSessionSetup(runtimeMessage.payload.sessionId);
       case "background/create-session":

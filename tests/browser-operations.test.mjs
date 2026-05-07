@@ -111,11 +111,15 @@ test("browser_health reports transport, extension, and labeled session state", a
       ),
     );
     assert.equal(health.transport.brokerConnected, true);
+    assert.ok(health.transport.serverRoot.endsWith("browsefleetmcp"));
+    assert.ok(health.transport.broker.toolCount > 0);
+    assert.ok(health.transport.broker.toolSurfaceFingerprint);
     assert.equal(health.extension.connected, true);
     assert.equal(health.extension.extensionVersion, "0.0.2");
     assert.equal(health.currentSession.sessionId, "labeled-session");
     assert.equal(health.currentSession.label, "Docs Search");
     assert.equal(health.sessions[0].label, "Docs Search");
+    assert.deepEqual(health.warnings, []);
     assert.ok(Array.isArray(health.transport.wsPortCandidates));
   } finally {
     await browserSession?.close().catch(() => undefined);

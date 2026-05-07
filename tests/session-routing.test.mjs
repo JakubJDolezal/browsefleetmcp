@@ -305,6 +305,20 @@ test(
       assert.ok(
         toolsResult.tools.some((tool) => tool.name === "browser_switch_session"),
       );
+      for (const expectedTool of [
+        "browser_snapshot",
+        "browser_page_snapshot",
+        "browser_click_by_text",
+        "browser_find_element",
+        "browser_extract_product_cards",
+        "browser_list_tabs",
+        "browser_switch_tab",
+      ]) {
+        assert.ok(
+          toolsResult.tools.some((tool) => tool.name === expectedTool),
+          `Expected ${expectedTool} in MCP tool surface`,
+        );
+      }
 
       step = "listing initial sessions";
       const initialSessions = await listSessions(clientOne.client);

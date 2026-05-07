@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 
@@ -13,14 +13,53 @@ import { isFocusRequiredToolName } from "@/focus-tools";
 import { createToolErrorResult } from "@/tool-errors";
 
 import type { Resource, ResourceResult } from "@/resources/resource";
-import type { Tool, ToolResult } from "@/tools/tool";
-import { handleSessionTool } from "./session-tools";
+import type { Tool, ToolResult, ToolSchema } from "@/tools/tool";
+import { handleSessionTool, sessionToolSchemas } from "./session-tools";
 import { SessionPool } from "./session-pool";
 
 const brokerHost = "127.0.0.1";
 const brokerReadyMessage = "browsefleetmcp-broker-ready";
+const brokerProtocolVersion = 2;
 const brokerRetryDelayMs = 100;
 const brokerRetryCount = 20;
+
+export type BrokerMetadata = {
+  ready: typeof brokerReadyMessage;
+  protocolVersion: typeof brokerProtocolVersion;
+  serverName: string;
+  serverVersion: string;
+  serverCwd: string;
+  serverRoot: string;
+  serverPid: number;
+  brokerPort: number;
+  startedAt: string;
+  toolNames: string[];
+  toolSurfaceFingerprint: string;
+  toolSchemas: ToolSchema[];
+  resourceUris: string[];
+};
+
+export type BrokerCompatibilityOptions = {
+  expectedServerRoot?: string;
+  expectedToolSurfaceFingerprint?: string;
+  expectedToolNames?: string[];
+  rejectLegacyBroker?: boolean;
+};
+
+export class IncompatibleBrokerError extends Error {
+  readonly brokerPort?: number;
+  readonly metadata?: BrokerMetadata;
+
+  constructor(
+    message: string,
+    options: { brokerPort?: number; metadata?: BrokerMetadata } = {},
+  ) {
+    super(message);
+    this.name = "IncompatibleBrokerError";
+    this.brokerPort = options.brokerPort;
+    this.metadata = options.metadata;
+  }
+}
 
 type BrokerRequest =
   | {
@@ -75,6 +114,7 @@ type BrokerResponse =
           }
         | CreatedSession
         | ExtensionReloadResult
+        | BrokerMetadata
         | string;
     }
   | {
@@ -90,6 +130,166 @@ type PendingRequest = {
 
 function parseMessage<T>(message: RawData): T {
   return JSON.parse(message.toString()) as T;
+}
+
+export function getBrokerToolSchemas(tools: Tool[]): ToolSchema[] {
+  return [...sessionToolSchemas, ...tools.map((tool) => tool.schema)];
+}
+
+function normalizeToolSchemas(toolSchemas: ToolSchema[]): ToolSchema[] {
+  return [...toolSchemas]
+    .map((schema) => ({
+      name: schema.name,
+      description: schema.description,
+      inputSchema: schema.inputSchema,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+export function createToolSurfaceFingerprint(toolSchemas: ToolSchema[]): string {
+  return createHash("sha256")
+    .update(JSON.stringify(normalizeToolSchemas(toolSchemas)))
+    .digest("hex");
+}
+
+function createBrokerMetadata(options: {
+  brokerPort: number;
+  name: string;
+  version: string;
+  serverRoot: string;
+  tools: Tool[];
+  resources: Resource[];
+}): BrokerMetadata {
+  const toolSchemas = getBrokerToolSchemas(options.tools);
+
+  return {
+    ready: brokerReadyMessage,
+    protocolVersion: brokerProtocolVersion,
+    serverName: options.name,
+    serverVersion: options.version,
+    serverCwd: process.cwd(),
+    serverRoot: options.serverRoot,
+    serverPid: process.pid,
+    brokerPort: options.brokerPort,
+    startedAt: new Date().toISOString(),
+    toolNames: toolSchemas.map((tool) => tool.name),
+    toolSurfaceFingerprint: createToolSurfaceFingerprint(toolSchemas),
+    toolSchemas,
+    resourceUris: options.resources.map((resource) => resource.schema.uri),
+  };
+}
+
+function parseBrokerMetadata(
+  handshake: BrokerMetadata | string,
+): BrokerMetadata | null {
+  if (handshake === brokerReadyMessage) {
+    return null;
+  }
+
+  if (
+    handshake &&
+    typeof handshake === "object" &&
+    handshake.ready === brokerReadyMessage &&
+    handshake.protocolVersion === brokerProtocolVersion
+  ) {
+    return handshake;
+  }
+
+  throw new Error("Connected to an unexpected BrowseFleetMCP broker process.");
+}
+
+function normalizePath(value?: string): string | undefined {
+  return value?.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+function compareToolNames(expected: string[], actual: string[]) {
+  const expectedSet = new Set(expected);
+  const actualSet = new Set(actual);
+
+  return {
+    missing: expected.filter((name) => !actualSet.has(name)).sort(),
+    extra: actual.filter((name) => !expectedSet.has(name)).sort(),
+  };
+}
+
+function assertCompatibleBroker(
+  client: BrokerClient,
+  options: BrokerCompatibilityOptions,
+) {
+  const metadata = client.metadata;
+
+  if (!metadata) {
+    if (!options.rejectLegacyBroker) {
+      return;
+    }
+
+    throw new IncompatibleBrokerError(
+      [
+        `Connected to a legacy BrowseFleetMCP broker on ${brokerHost}:${client.brokerPort}.`,
+        "Restart the BrowseFleetMCP transport so the active broker can report its tool surface before MCP clients use it.",
+      ].join(" "),
+      { brokerPort: client.brokerPort },
+    );
+  }
+
+  const expectedServerRoot = normalizePath(options.expectedServerRoot);
+  const brokerServerRoot = normalizePath(metadata.serverRoot);
+  if (
+    expectedServerRoot &&
+    brokerServerRoot &&
+    expectedServerRoot !== brokerServerRoot
+  ) {
+    throw new IncompatibleBrokerError(
+      [
+        `Connected to a BrowseFleetMCP broker from "${metadata.serverRoot}" on ${brokerHost}:${client.brokerPort},`,
+        `but this MCP process was loaded from "${options.expectedServerRoot}".`,
+        "Restart the BrowseFleetMCP transport so all MCP clients route to the same installed build.",
+      ].join(" "),
+      { brokerPort: client.brokerPort, metadata },
+    );
+  }
+
+  if (
+    options.expectedToolSurfaceFingerprint &&
+    metadata.toolSurfaceFingerprint &&
+    options.expectedToolSurfaceFingerprint !== metadata.toolSurfaceFingerprint
+  ) {
+    const expectedToolNames = options.expectedToolNames ?? [];
+    const { missing, extra } = compareToolNames(
+      expectedToolNames,
+      metadata.toolNames,
+    );
+    const details = [
+      missing.length > 0 ? `missing tools: ${missing.join(", ")}` : undefined,
+      extra.length > 0 ? `extra tools: ${extra.join(", ")}` : undefined,
+    ].filter(Boolean);
+
+    throw new IncompatibleBrokerError(
+      [
+        `Connected to a stale BrowseFleetMCP broker on ${brokerHost}:${client.brokerPort}.`,
+        `Broker PID ${metadata.serverPid} from "${metadata.serverRoot}" has a different tool surface.`,
+        details.length > 0 ? details.join("; ") + "." : undefined,
+        "Restart the BrowseFleetMCP transport before using this MCP client.",
+      ].filter(Boolean).join(" "),
+      { brokerPort: client.brokerPort, metadata },
+    );
+  }
+
+  if (options.expectedToolNames) {
+    const { missing } = compareToolNames(
+      options.expectedToolNames,
+      metadata.toolNames,
+    );
+    if (missing.length > 0) {
+      throw new IncompatibleBrokerError(
+        [
+          `Connected to a BrowseFleetMCP broker on ${brokerHost}:${client.brokerPort} that is missing advertised tools: ${missing.join(", ")}.`,
+          "Restart the BrowseFleetMCP transport before using this MCP client.",
+        ].join(" "),
+        { brokerPort: client.brokerPort, metadata },
+      );
+    }
+  }
 }
 
 function sendMessage(socket: WebSocket, message: BrokerResponse) {
@@ -185,6 +385,9 @@ function isAuthorized(providedToken?: string): boolean {
 }
 
 export async function createBrokerServer(options: {
+  name: string;
+  version: string;
+  serverRoot: string;
   tools: Tool[];
   resources: Resource[];
   sessionPool: SessionPool;
@@ -200,6 +403,14 @@ export async function createBrokerServer(options: {
     try {
       return await new Promise((resolve, reject) => {
         const server = new WebSocketServer({ host: brokerHost, port: brokerPort });
+        const metadata = createBrokerMetadata({
+          brokerPort,
+          name: options.name,
+          version: options.version,
+          serverRoot: options.serverRoot,
+          tools,
+          resources,
+        });
         const onError = (error: Error) => {
           server.off("listening", onListening);
           reject(error);
@@ -252,7 +463,7 @@ export async function createBrokerServer(options: {
                     sendMessage(socket, {
                       id: message.id,
                       ok: true,
-                      result: brokerReadyMessage,
+                      result: metadata,
                     });
                     return;
                   case "callTool":
@@ -336,8 +547,12 @@ export async function createBrokerServer(options: {
 export class BrokerClient {
   private readonly pendingRequests = new Map<string, PendingRequest>();
   private readonly closePromise: Promise<void>;
+  metadata: BrokerMetadata | null = null;
 
-  private constructor(private readonly socket: WebSocket) {
+  private constructor(
+    private readonly socket: WebSocket,
+    readonly brokerPort: number,
+  ) {
     this.closePromise = new Promise<void>((resolve) => {
       this.socket.once("close", () => resolve());
     });
@@ -370,30 +585,37 @@ export class BrokerClient {
     });
   }
 
-  static async connect(retryCount: number = brokerRetryCount): Promise<BrokerClient> {
+  static async connect(
+    retryCount: number = brokerRetryCount,
+    options: BrokerCompatibilityOptions = {},
+  ): Promise<BrokerClient> {
     let lastError: unknown;
 
     for (let attempt = 0; attempt < retryCount; attempt += 1) {
       for (const brokerPort of getBrokerPortCandidates()) {
+        let client: BrokerClient | undefined;
         try {
-          const client = await new Promise<BrokerClient>((resolve, reject) => {
+          client = await new Promise<BrokerClient>((resolve, reject) => {
             const socket = new WebSocket(`ws://${brokerHost}:${brokerPort}`);
 
-            socket.once("open", () => resolve(new BrokerClient(socket)));
+            socket.once("open", () => resolve(new BrokerClient(socket, brokerPort)));
             socket.once("error", reject);
           });
 
           const authToken = getAuthToken();
-          const handshake = await client.request<string>(
+          const handshake = await client.request<BrokerMetadata | string>(
             "hello",
             authToken ? { authToken } : undefined,
           );
-          if (handshake !== brokerReadyMessage) {
-            throw new Error("Connected to an unexpected broker process.");
-          }
+          client.metadata = parseBrokerMetadata(handshake);
+          assertCompatibleBroker(client, options);
 
           return client;
         } catch (error) {
+          await client?.close().catch(() => undefined);
+          if (error instanceof IncompatibleBrokerError) {
+            throw error;
+          }
           lastError = error;
         }
       }

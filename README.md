@@ -17,11 +17,11 @@ Docs: https://jakubjdolezal.github.io/browsefleetmcp/
 - Copy-ready client configs in [`examples/`](./examples)
 - The public setup site in [`docs/`](./docs)
 
-Important: the npm package gives you the server, not the extension bundle. You still need a checkout of this repo so Chrome can load [`extension-v2/`](./extension-v2) as an unpacked extension.
+Important: the npm package gives you the server, not the extension bundle. You still need a checkout of this repo so a Chromium-based browser can load [`extension-v2/`](./extension-v2) as an unpacked extension.
 
 ## Why It Exists
 
-- It uses your existing Chrome profile, so websites behave like your normal browser instead of a fresh automation sandbox.
+- It uses your existing browser profile, so websites behave like your normal browser instead of a fresh automation sandbox.
 - It can keep multiple connected sessions alive at once, with one leased session per MCP client.
 - It isolates connected tabs into separate windows so agents do not step on each other.
 - It exposes both a simplified DOM snapshot view and real rendered screenshots.
@@ -51,7 +51,14 @@ npm install
 npm run build
 ```
 
-Then open `chrome://extensions`, enable Developer mode, choose `Load unpacked`, and select [`extension-v2/`](./extension-v2).
+Then open your browser's extensions page, enable Developer mode, choose `Load unpacked`, and select [`extension-v2/`](./extension-v2).
+
+Supported in practice:
+
+- Google Chrome
+- Chromium
+
+Other Chromium-based browsers may work, but the repo currently only auto-detects Chrome and Chromium executables in the E2E launcher paths. If you use another browser, set `BROWSEFLEET_CHROME_EXECUTABLE` explicitly.
 
 ### 2. Run the server
 
@@ -164,3 +171,5 @@ cd extension-v2 && npm test
 - Browser tools stop working after local changes: rebuild the extension and run `browsefleetmcp reload-extension`.
 - Your client is still using an older server build: point it at `node /absolute/path/to/browsefleetmcp/dist/index.js` instead of `npx -y browsefleetmcp`.
 - Chrome Web Store pages are intentionally not connectable.
+- To force a specific browser binary for local E2E runs, set `BROWSEFLEET_CHROME_EXECUTABLE`, for example `/Applications/Chromium.app/Contents/MacOS/Chromium`.
+- Homebrew's macOS `chromium` cask can be blocked by Gatekeeper or ship with a broken signature. Prefer Chrome unless you have a specific reason to run Chromium.

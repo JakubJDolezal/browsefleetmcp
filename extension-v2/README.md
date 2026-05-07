@@ -1,10 +1,10 @@
 # BrowseFleetMCP Extension
 
 <p align="center">
-  <img src="../.github/images/browsefleetmcp-logo.png" alt="BrowseFleetMCP" width="360" />
+  <img src="../.github/images/browsefleetmcp-logo.svg" alt="BrowseFleetMCP" width="360" />
 </p>
 
-This is the TypeScript Chrome extension for BrowseFleetMCP.
+This is the TypeScript extension for BrowseFleetMCP for Chromium-compatible browsers.
 
 ## Runtime Model
 
@@ -34,7 +34,7 @@ npm install
 npm run build
 ```
 
-Then load `extension-v2/` as an unpacked extension in Chrome.
+Then load `extension-v2/` as an unpacked extension in Chrome or Chromium.
 
 ## Testing
 
@@ -44,6 +44,8 @@ npm run test:e2e
 ```
 
 To rerun just one classified action in the headed E2E, set `BROWSEFLEET_E2E_ACTION` to the socket request type you want to exercise, for example `browser_click` or `browser_drag`.
+
+The E2E launcher auto-detects Google Chrome and Chromium. To use a different Chromium-based browser, set `BROWSEFLEET_CHROME_EXECUTABLE` to the browser binary path.
 
 ## Ports
 

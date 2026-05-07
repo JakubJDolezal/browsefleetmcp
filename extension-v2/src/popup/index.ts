@@ -7,13 +7,29 @@ import type {
   SessionRecord,
 } from "../shared/protocol.js";
 import {
+  BACKGROUND_BRIDGE_PORT_NAME,
   CONNECTION_SETTINGS_STORAGE_KEY,
   SESSION_STORAGE_KEY,
   normalizeConnectionSettings,
 } from "../shared/protocol.js";
 
+const BACKGROUND_KEEP_ALIVE_INTERVAL_MS = 10_000;
+const BACKGROUND_KEEP_ALIVE_RECONNECT_MS = 1_000;
+const BACKGROUND_WAKE_INTERVAL_MS = 1_000;
+
 let refreshPromise: Promise<void> | undefined;
 let refreshQueued = false;
+let backgroundKeepAlivePort:
+  | ReturnType<typeof chrome.runtime.connect>
+  | undefined;
+let backgroundKeepAliveTimer:
+  | ReturnType<typeof globalThis.setInterval>
+  | undefined;
+let backgroundKeepAliveReconnectTimer:
+  | ReturnType<typeof globalThis.setTimeout>
+  | undefined;
+let backgroundWakeTimer: ReturnType<typeof globalThis.setInterval> | undefined;
+let backgroundKeepAliveRequestSeq = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -491,5 +507,94 @@ function wireEvents(): void {
   });
 }
 
+function unrefTimer(
+  timer:
+    | ReturnType<typeof globalThis.setInterval>
+    | ReturnType<typeof globalThis.setTimeout>,
+): void {
+  (timer as { unref?: () => void }).unref?.();
+}
+
+function scheduleBackgroundKeepAliveReconnect(): void {
+  if (backgroundKeepAliveReconnectTimer !== undefined) {
+    return;
+  }
+
+  backgroundKeepAliveReconnectTimer = globalThis.setTimeout(() => {
+    backgroundKeepAliveReconnectTimer = undefined;
+    startBackgroundKeepAlive();
+  }, BACKGROUND_KEEP_ALIVE_RECONNECT_MS);
+  unrefTimer(backgroundKeepAliveReconnectTimer);
+}
+
+function stopBackgroundKeepAliveTimer(): void {
+  if (backgroundKeepAliveTimer === undefined) {
+    return;
+  }
+
+  globalThis.clearInterval(backgroundKeepAliveTimer);
+  backgroundKeepAliveTimer = undefined;
+}
+
+function sendBackgroundKeepAlivePing(): void {
+  void chrome.runtime
+    .sendMessage({ type: "background/get-extension-status" })
+    .catch(() => undefined);
+
+  if (!backgroundKeepAlivePort) {
+    return;
+  }
+
+  try {
+    backgroundKeepAlivePort.postMessage({
+      requestId: `popup-keepalive-${Date.now()}-${++backgroundKeepAliveRequestSeq}`,
+      message: { type: "background/get-extension-status" },
+    });
+  } catch {
+    backgroundKeepAlivePort = undefined;
+    stopBackgroundKeepAliveTimer();
+    scheduleBackgroundKeepAliveReconnect();
+  }
+}
+
+function startBackgroundKeepAlive(): void {
+  if (backgroundWakeTimer === undefined) {
+    sendBackgroundKeepAlivePing();
+    backgroundWakeTimer = globalThis.setInterval(
+      sendBackgroundKeepAlivePing,
+      BACKGROUND_WAKE_INTERVAL_MS,
+    );
+    unrefTimer(backgroundWakeTimer);
+  }
+
+  if (
+    backgroundKeepAlivePort ||
+    typeof chrome?.runtime?.connect !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    const port = chrome.runtime.connect({ name: BACKGROUND_BRIDGE_PORT_NAME });
+    backgroundKeepAlivePort = port;
+    port.onDisconnect.addListener(() => {
+      if (backgroundKeepAlivePort === port) {
+        backgroundKeepAlivePort = undefined;
+      }
+      stopBackgroundKeepAliveTimer();
+      scheduleBackgroundKeepAliveReconnect();
+    });
+    sendBackgroundKeepAlivePing();
+    backgroundKeepAliveTimer = globalThis.setInterval(
+      sendBackgroundKeepAlivePing,
+      BACKGROUND_KEEP_ALIVE_INTERVAL_MS,
+    );
+    unrefTimer(backgroundKeepAliveTimer);
+  } catch {
+    scheduleBackgroundKeepAliveReconnect();
+  }
+}
+
 wireEvents();
+startBackgroundKeepAlive();
 void refresh().catch((error) => setError(formatError(error)));

@@ -8,6 +8,7 @@ export const CONNECTION_SETTINGS_STORAGE_KEY =
   "browsefleetmcp.connectionSettings";
 export const TEST_DESKTOP_CAPTURE_STORAGE_KEY =
   "__browsefleetmcp.testDesktopCaptureImage";
+export const SESSION_COMMAND_SET_VERSION = 2;
 
 export type ExtensionError = {
   [EXTENSION_ERROR_KEY]: true;
@@ -52,6 +53,17 @@ export type SessionRecord = {
   lastCloseReason?: string;
   connectedAt: string;
   updatedAt: string;
+};
+
+export type BrowserTabInfo = {
+  tabId: number;
+  windowId: number;
+  title: string;
+  url: string;
+  active: boolean;
+  sessionId?: string;
+  sessionStatus?: SessionStatus;
+  label?: string;
 };
 
 export type SessionTransportPatch = Partial<
@@ -100,7 +112,9 @@ export type ExtensionStatus = {
 export type ServerMetadata = {
   serverVersion: string;
   serverCwd: string;
+  serverRoot?: string;
   expectedExtensionRoot: string | null;
+  expectedExtensionBuiltAt?: string | null;
   wsPortCandidates: number[];
   brokerPortCandidates: number[];
   serverPid: number;
@@ -195,6 +209,13 @@ export type BackgroundRequest =
       type: "background/prune-sessions";
     }
   | {
+      type: "background/list-tabs";
+    }
+  | {
+      type: "background/connect-tab";
+      payload: { tabId: number; label?: string };
+    }
+  | {
       type: "background/get-session-setup";
       payload: { sessionId: string };
     }
@@ -241,8 +262,21 @@ export type CurrentTabInfo = {
 export type ContentRequest =
   | { type: "ping" }
   | { type: "generateAriaSnapshot" }
+  | { type: "generatePageSnapshot" }
+  | {
+      type: "extractProductCards";
+      payload: { query?: string; maxCards?: number };
+    }
+  | {
+      type: "findElement";
+      payload: { label?: string; text?: string; role?: string; exact?: boolean };
+    }
   | { type: "getSelectorForAriaRef"; payload: { ariaRef: string } }
   | { type: "scrollIntoView"; payload: { selector: string } }
+  | {
+      type: "getClickFallbackCandidates";
+      payload: { selector: string };
+    }
   | {
       type: "getElementCoordinates";
       payload: { selector: string; options?: { clickable?: boolean } };
@@ -258,6 +292,18 @@ export type ContentRequest =
   | {
       type: "selectOption";
       payload: { selector: string; values: string[] };
+    }
+  | {
+      type: "setInputByLabel";
+      payload: { label: string; value: string; exact?: boolean };
+    }
+  | {
+      type: "selectOptionByLabel";
+      payload: { label: string; option: string; exact?: boolean };
+    }
+  | {
+      type: "clickByText";
+      payload: { text: string; role?: string; exact?: boolean };
     }
   | { type: "getConsoleLogs" };
 

@@ -31,6 +31,18 @@ export class Context {
       if (e instanceof Error && e.message === mcpConfig.errors.noConnectedTab) {
         throw new Error(noConnectionMessage);
       }
+      if (
+        e instanceof Error &&
+        /Unsupported socket request type/i.test(e.message)
+      ) {
+        throw new Error(
+          [
+            e.message,
+            "The selected browser session was connected by an older BrowseFleetMCP extension transport or stale background worker.",
+            "Reload the extension and reconnect this tab/session, then retry.",
+          ].join(" "),
+        );
+      }
       throw e;
     }
   }

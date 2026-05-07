@@ -1,5 +1,6 @@
 import {
   SOCKET_RESPONSE_TYPE,
+  SESSION_COMMAND_SET_VERSION,
   getSocketPortCandidates,
   nowIso,
   type BackgroundRequest,
@@ -9,6 +10,10 @@ import {
   type SessionTransportPatch,
 } from "../shared/protocol.js";
 import { socketRequestRequiresFocus } from "../background/focus-lock.js";
+import {
+  EXTENSION_BUILD_SOURCE_ROOT,
+  EXTENSION_BUILD_TIMESTAMP,
+} from "../generated/build-info.js";
 import {
   HEARTBEAT_INTERVAL_MS,
   SOCKET_CONNECT_TIMEOUT_MS,
@@ -43,6 +48,23 @@ function createSocketUrl(
   socketUrl.searchParams.set("sessionId", session.sessionId);
   socketUrl.searchParams.set("tabId", String(session.tabId));
   socketUrl.searchParams.set("windowId", String(session.windowId));
+  socketUrl.searchParams.set(
+    "commandSetVersion",
+    String(SESSION_COMMAND_SET_VERSION),
+  );
+  const runtime = typeof chrome !== "undefined" ? chrome.runtime : undefined;
+  if (runtime?.getManifest) {
+    socketUrl.searchParams.set(
+      "extensionVersion",
+      runtime.getManifest().version,
+    );
+  }
+  if (EXTENSION_BUILD_SOURCE_ROOT) {
+    socketUrl.searchParams.set("buildSourceRoot", EXTENSION_BUILD_SOURCE_ROOT);
+  }
+  if (EXTENSION_BUILD_TIMESTAMP) {
+    socketUrl.searchParams.set("builtAt", EXTENSION_BUILD_TIMESTAMP);
+  }
   if (session.label) {
     socketUrl.searchParams.set("label", session.label);
   }

@@ -18,6 +18,10 @@ export type BrowserSessionSummary = {
   tabId?: number;
   windowId?: number;
   label?: string;
+  commandSetVersion?: number;
+  extensionVersion?: string;
+  buildSourceRoot?: string;
+  builtAt?: string;
   status: "available" | "current" | "in-use";
   recentClientCount: number;
   lastTouchedAt: string | null;
@@ -43,6 +47,10 @@ type SessionConnectionMetadata = {
   tabId?: number;
   windowId?: number;
   label?: string;
+  commandSetVersion?: number;
+  extensionVersion?: string;
+  buildSourceRoot?: string;
+  builtAt?: string;
 };
 
 type BrowserSession = {
@@ -51,6 +59,10 @@ type BrowserSession = {
   tabId?: number;
   windowId?: number;
   label?: string;
+  commandSetVersion?: number;
+  extensionVersion?: string;
+  buildSourceRoot?: string;
+  builtAt?: string;
   leasedTo?: string;
   recentTouches: Map<string, number>;
   executor: SerialExecutor;
@@ -119,6 +131,11 @@ export class SessionPool {
     session.tabId = metadata.tabId ?? session.tabId;
     session.windowId = metadata.windowId ?? session.windowId;
     session.label = metadata.label ?? session.label;
+    session.commandSetVersion =
+      metadata.commandSetVersion ?? session.commandSetVersion;
+    session.extensionVersion = metadata.extensionVersion ?? session.extensionVersion;
+    session.buildSourceRoot = metadata.buildSourceRoot ?? session.buildSourceRoot;
+    session.builtAt = metadata.builtAt ?? session.builtAt;
 
     if (previousWs && previousWs !== ws) {
       previousWs.close();
@@ -261,11 +278,17 @@ export class SessionPool {
   switchClientSession(
     clientId: string,
     sessionId: string,
+    options: { takeOver?: boolean } = {},
   ): BrowserSessionSummary {
     const session = this.getOpenSessionOrThrow(sessionId);
 
     if (session.leasedTo && session.leasedTo !== clientId) {
-      throw new Error(`Session "${sessionId}" is already in use by another client.`);
+      if (!options.takeOver) {
+        throw new Error(
+          `Session "${sessionId}" is already in use by another client. Retry with takeOver=true only after explicit user authorization.`,
+        );
+      }
+      this.clientLeases.delete(session.leasedTo);
     }
 
     const currentSessionId = this.getOpenLease(clientId);
@@ -428,6 +451,10 @@ export class SessionPool {
       tabId: session.tabId,
       windowId: session.windowId,
       label: session.label,
+      commandSetVersion: session.commandSetVersion,
+      extensionVersion: session.extensionVersion,
+      buildSourceRoot: session.buildSourceRoot,
+      builtAt: session.builtAt,
       status:
         session.sessionId === currentSessionId
           ? "current"

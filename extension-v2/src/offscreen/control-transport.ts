@@ -233,6 +233,10 @@ export class ExtensionControlTransport {
             type: "background/create-session",
             payload: {
               url: message.payload?.url,
+              label:
+                typeof message.payload?.label === "string"
+                  ? message.payload.label
+                  : undefined,
             },
           });
           break;
@@ -249,6 +253,23 @@ export class ExtensionControlTransport {
         case "extension_prune_sessions":
           result = await this.options.requestBackground({
             type: "background/prune-sessions",
+          });
+          break;
+        case "extension_list_tabs":
+          result = await this.options.requestBackground({
+            type: "background/list-tabs",
+          });
+          break;
+        case "extension_connect_tab":
+          result = await this.options.requestBackground({
+            type: "background/connect-tab",
+            payload: {
+              tabId: Number(message.payload?.tabId),
+              label:
+                typeof message.payload?.label === "string"
+                  ? message.payload.label
+                  : undefined,
+            },
           });
           break;
         case "extension_reconnect_session":

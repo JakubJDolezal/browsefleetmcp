@@ -1,5 +1,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
@@ -9,12 +11,17 @@ import {
 import { WebSocketServer } from "ws";
 
 import type { AdminControls } from "@/admin-controls";
-import { BrokerClient, createBrokerServer } from "@/broker";
+import {
+  BrokerClient,
+  IncompatibleBrokerError,
+  createBrokerServer,
+  createToolSurfaceFingerprint,
+  getBrokerToolSchemas,
+} from "@/broker";
 import { getBrokerPortCandidates, getWsPortCandidates } from "@/config";
 import { ExtensionControl } from "@/extension-control";
 import type { Resource } from "@/resources/resource";
 import { SessionPool } from "@/session-pool";
-import { sessionToolSchemas } from "@/session-tools";
 import type { Tool } from "@/tools/tool";
 import { createWebSocketServer } from "@/ws";
 
@@ -34,6 +41,25 @@ type OwnedBrokerResources = {
 
 const brokerEstablishAttemptCount = 20;
 const brokerEstablishRetryDelayMs = 100;
+const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const expectedExtensionRoot = path.join(serverRoot, "extension-v2");
+
+function readExpectedExtensionBuiltAt(): string | null {
+  try {
+    const buildInfo = readFileSync(
+      path.join(
+        expectedExtensionRoot,
+        "src/generated/build-info.ts",
+      ),
+      "utf8",
+    );
+    return (
+      buildInfo.match(/EXTENSION_BUILD_TIMESTAMP = "([^"]+)"/)?.[1] ?? null
+    );
+  } catch {
+    return null;
+  }
+}
 
 async function closeWebSocketServer(server?: WebSocketServer): Promise<void> {
   if (!server) {
@@ -66,6 +92,17 @@ async function closeWebSocketServer(server?: WebSocketServer): Promise<void> {
 
 export async function createServerWithTools(options: Options): Promise<Server> {
   const { name, version, tools, resources } = options;
+  const localToolSchemas = getBrokerToolSchemas(tools);
+  const expectedToolNames = localToolSchemas.map((tool) => tool.name);
+  const expectedToolSurfaceFingerprint =
+    createToolSurfaceFingerprint(localToolSchemas);
+  const expectedExtensionBuiltAt = readExpectedExtensionBuiltAt();
+  const brokerCompatibility = {
+    expectedServerRoot: serverRoot,
+    expectedToolNames,
+    expectedToolSurfaceFingerprint,
+    rejectLegacyBroker: true,
+  };
   const server = new Server(
     { name, version },
     {
@@ -108,22 +145,30 @@ export async function createServerWithTools(options: Options): Promise<Server> {
     wss.on("connection", (websocket, request) => {
       const requestUrl = new URL(request.url ?? "/", "ws://127.0.0.1");
       if (requestUrl.searchParams.get("channel") === "control") {
-        extensionControl.attachConnection(websocket, {
-          extensionId: parseString(requestUrl.searchParams.get("extensionId")) ?? null,
-          extensionVersion:
-            parseString(requestUrl.searchParams.get("extensionVersion")) ?? null,
-          extensionRootUrl:
-            parseString(requestUrl.searchParams.get("extensionRootUrl")) ?? null,
-          buildSourceRoot:
-            parseString(requestUrl.searchParams.get("buildSourceRoot")) ?? null,
-          builtAt: parseString(requestUrl.searchParams.get("builtAt")) ?? null,
-          browserVersion:
-            parseString(requestUrl.searchParams.get("browserVersion")) ?? null,
-          browserUserAgent:
-            parseString(requestUrl.searchParams.get("browserUserAgent")) ?? null,
-          transportMode:
-            parseString(requestUrl.searchParams.get("transportMode")) ?? null,
-        });
+        extensionControl.attachConnection(
+          websocket,
+          {
+            extensionId:
+              parseString(requestUrl.searchParams.get("extensionId")) ?? null,
+            extensionVersion:
+              parseString(requestUrl.searchParams.get("extensionVersion")) ?? null,
+            extensionRootUrl:
+              parseString(requestUrl.searchParams.get("extensionRootUrl")) ?? null,
+            buildSourceRoot:
+              parseString(requestUrl.searchParams.get("buildSourceRoot")) ?? null,
+            builtAt: parseString(requestUrl.searchParams.get("builtAt")) ?? null,
+            browserVersion:
+              parseString(requestUrl.searchParams.get("browserVersion")) ?? null,
+            browserUserAgent:
+              parseString(requestUrl.searchParams.get("browserUserAgent")) ?? null,
+            transportMode:
+              parseString(requestUrl.searchParams.get("transportMode")) ?? null,
+          },
+          {
+            expectedBuildSourceRoot: expectedExtensionRoot,
+            expectedBuiltAt: expectedExtensionBuiltAt,
+          },
+        );
         if (websocket.readyState === 1) {
           websocket.send(
             JSON.stringify({
@@ -131,7 +176,9 @@ export async function createServerWithTools(options: Options): Promise<Server> {
               payload: {
                 serverVersion: version,
                 serverCwd: process.cwd(),
-                expectedExtensionRoot: path.join(process.cwd(), "extension-v2"),
+                serverRoot,
+                expectedExtensionRoot,
+                expectedExtensionBuiltAt,
                 wsPortCandidates: getWsPortCandidates(),
                 brokerPortCandidates: getBrokerPortCandidates(),
                 serverPid: process.pid,
@@ -148,6 +195,14 @@ export async function createServerWithTools(options: Options): Promise<Server> {
         tabId: parseNumber(requestUrl.searchParams.get("tabId")),
         windowId: parseNumber(requestUrl.searchParams.get("windowId")),
         label: parseString(requestUrl.searchParams.get("label")),
+        commandSetVersion: parseNumber(
+          requestUrl.searchParams.get("commandSetVersion"),
+        ),
+        extensionVersion:
+          parseString(requestUrl.searchParams.get("extensionVersion")) ?? undefined,
+        buildSourceRoot:
+          parseString(requestUrl.searchParams.get("buildSourceRoot")) ?? undefined,
+        builtAt: parseString(requestUrl.searchParams.get("builtAt")) ?? undefined,
       });
     });
   };
@@ -169,8 +224,11 @@ export async function createServerWithTools(options: Options): Promise<Server> {
     retryCount: number,
   ): Promise<BrokerClient | undefined> => {
     try {
-      return await BrokerClient.connect(retryCount);
-    } catch {
+      return await BrokerClient.connect(retryCount, brokerCompatibility);
+    } catch (error) {
+      if (error instanceof IncompatibleBrokerError) {
+        throw error;
+      }
       return undefined;
     }
   };
@@ -185,7 +243,9 @@ export async function createServerWithTools(options: Options): Promise<Server> {
       brokerPortCandidates: [],
       serverPid: process.pid,
       serverCwd: process.cwd(),
+      serverRoot,
       serverVersion: version,
+      broker: null,
     }),
     getSessionPoolHealth: () => ({
       sessionCount: 0,
@@ -212,6 +272,9 @@ export async function createServerWithTools(options: Options): Promise<Server> {
 
     try {
       brokerServer = await createBrokerServer({
+        name,
+        version,
+        serverRoot,
         tools,
         resources,
         sessionPool,
@@ -220,7 +283,10 @@ export async function createServerWithTools(options: Options): Promise<Server> {
       });
       wss = await createWebSocketServer();
       attachSessionServer(wss, sessionPool, extensionControl);
-      nextBrokerClient = await BrokerClient.connect();
+      nextBrokerClient = await BrokerClient.connect(
+        undefined,
+        brokerCompatibility,
+      );
       ownedBrokerResources = {
         brokerServer,
         wss,
@@ -384,7 +450,22 @@ export async function createServerWithTools(options: Options): Promise<Server> {
     brokerPortCandidates: getBrokerPortCandidates(),
     serverPid: process.pid,
     serverCwd: process.cwd(),
+    serverRoot,
     serverVersion: version,
+    broker: brokerClient?.metadata
+      ? {
+          protocolVersion: brokerClient.metadata.protocolVersion,
+          serverName: brokerClient.metadata.serverName,
+          serverVersion: brokerClient.metadata.serverVersion,
+          serverCwd: brokerClient.metadata.serverCwd,
+          serverRoot: brokerClient.metadata.serverRoot,
+          serverPid: brokerClient.metadata.serverPid,
+          brokerPort: brokerClient.metadata.brokerPort,
+          startedAt: brokerClient.metadata.startedAt,
+          toolCount: brokerClient.metadata.toolNames.length,
+          toolSurfaceFingerprint: brokerClient.metadata.toolSurfaceFingerprint,
+        }
+      : null,
   });
   adminControls.getSessionPoolHealth = () =>
     ownedBrokerResources?.sessionPool.getHealth() ?? {
@@ -431,7 +512,7 @@ export async function createServerWithTools(options: Options): Promise<Server> {
   }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools: [...sessionToolSchemas, ...tools.map((tool) => tool.schema)] };
+    return { tools: brokerClient?.metadata?.toolSchemas ?? localToolSchemas };
   });
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {

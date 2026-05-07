@@ -8,7 +8,20 @@ export type TransportHealth = {
   brokerPortCandidates: number[];
   serverPid: number;
   serverCwd: string;
+  serverRoot: string;
   serverVersion: string;
+  broker: {
+    protocolVersion: number;
+    serverName: string;
+    serverVersion: string;
+    serverCwd: string;
+    serverRoot: string;
+    serverPid: number;
+    brokerPort: number;
+    startedAt: string;
+    toolCount: number;
+    toolSurfaceFingerprint: string;
+  } | null;
 };
 
 export type AdminControls = {

@@ -161,6 +161,10 @@ test("SessionTransportHub sends heartbeats and records heartbeat acknowledgement
   await hub.connectSession("session-1");
 
   assert.equal(MockWebSocket.instances.length, 1);
+  const socketUrl = new URL(MockWebSocket.instances[0].url);
+  assert.equal(socketUrl.searchParams.get("commandSetVersion"), "2");
+  assert.ok(socketUrl.searchParams.get("buildSourceRoot"));
+  assert.ok(socketUrl.searchParams.get("builtAt"));
   assert.ok(
     transportUpdates.some((patch) => patch.status === "connected"),
   );

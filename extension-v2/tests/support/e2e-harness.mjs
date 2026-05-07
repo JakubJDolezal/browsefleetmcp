@@ -157,6 +157,12 @@ function createPageOneHtml(origin, label = "default") {
     <div class="row">
       <a id="next-link" href="${origin}/page2">Go to page two</a>
     </div>
+    <article class="product-card" data-product-id="P-01298241">
+      <img alt="Black door handle" src="${origin}/image-placeholder.png" />
+      <h2>Door handle set, Stainless steel, Startec, model LDH 2171</h2>
+      <p>Article P-01298241</p>
+      <a href="${origin}/page2?product=P-01298241">View 1 Article</a>
+    </article>
     <div class="row">
       <button id="busy-button">Busy action</button>
       <span id="busy-status">idle</span>

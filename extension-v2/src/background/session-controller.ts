@@ -39,6 +39,18 @@ export type SessionControllerOptions = {
   ) => Promise<T>;
 };
 
+type ClickFallbackCandidate = {
+  selector: string;
+  reason: "target" | "descendant" | "ancestor";
+  text?: string;
+  name?: string;
+  href?: string;
+};
+
+type PointerMotionPreference = {
+  pointerMode: ConnectionSettings["pointerMode"];
+};
+
 export class SessionController {
   private disposed = false;
   private record: SessionRecord;
@@ -151,8 +163,18 @@ export class SessionController {
           return null;
         case "browser_snapshot":
           return await this.captureSnapshot();
+        case "browser_page_snapshot":
+          return await this.capturePageSnapshot();
+        case "browser_extract_product_cards":
+          return await this.extractProductCards(payload);
+        case "browser_find_element":
+          return await this.findElement(payload);
         case "browser_click":
-          await this.click(String(payload.ref));
+          await this.click(
+            String(payload.ref),
+            typeof payload?.element === "string" ? payload.element : "",
+            payload?.followHref !== false,
+          );
           return null;
         case "browser_drag":
           await this.drag(String(payload.startRef), String(payload.endRef));
@@ -169,6 +191,15 @@ export class SessionController {
           return null;
         case "browser_select_option":
           await this.selectOption(String(payload.ref), payload.values);
+          return null;
+        case "browser_set_input_by_label":
+          await this.setInputByLabel(payload);
+          return null;
+        case "browser_select_option_by_label":
+          await this.selectOptionByLabel(payload);
+          return null;
+        case "browser_click_by_text":
+          await this.clickByText(payload);
           return null;
         case "browser_screenshot":
           return await captureTabScreenshot(this.record.tabId);
@@ -230,9 +261,125 @@ export class SessionController {
     });
   }
 
-  private async click(ref: string): Promise<void> {
+  private async capturePageSnapshot(): Promise<unknown> {
+    await ensureContentScript(this.record.tabId);
+    await this.refreshFromTab();
+    return await sendTabMessage(this.record.tabId, {
+      type: "generatePageSnapshot",
+    });
+  }
+
+  private async extractProductCards(payload: any): Promise<unknown> {
+    await ensureContentScript(this.record.tabId);
+    await this.refreshFromTab();
+    return await sendTabMessage(this.record.tabId, {
+      type: "extractProductCards",
+      payload: {
+        query: typeof payload?.query === "string" ? payload.query : undefined,
+        maxCards:
+          typeof payload?.maxCards === "number" ? payload.maxCards : undefined,
+      },
+    });
+  }
+
+  private async findElement(payload: any): Promise<unknown> {
+    await ensureContentScript(this.record.tabId);
+    return await sendTabMessage(this.record.tabId, {
+      type: "findElement",
+      payload: {
+        label: typeof payload?.label === "string" ? payload.label : undefined,
+        text: typeof payload?.text === "string" ? payload.text : undefined,
+        role: typeof payload?.role === "string" ? payload.role : undefined,
+        exact: Boolean(payload?.exact),
+      },
+    });
+  }
+
+  private async click(
+    ref: string,
+    elementText = "",
+    followHref = true,
+  ): Promise<void> {
     await ensureContentScript(this.record.tabId);
     const selector = await this.getSelectorForRef(ref);
+    const pointerMotion = await this.getPointerMotionOptions();
+    const failures: string[] = [];
+
+    const recordFailure = (label: string, error: unknown) => {
+      failures.push(`${label}: ${errorMessage(error)}`);
+    };
+
+    try {
+      await this.clickSelector(selector, pointerMotion);
+      return;
+    } catch (error) {
+      recordFailure("ref", error);
+    }
+
+    let fallbackCandidates: ClickFallbackCandidate[] = [];
+    try {
+      fallbackCandidates = await sendTabMessage<ClickFallbackCandidate[]>(
+        this.record.tabId,
+        {
+          type: "getClickFallbackCandidates",
+          payload: { selector },
+        },
+      );
+    } catch (error) {
+      recordFailure("fallback-discovery", error);
+    }
+
+    const seenSelectors = new Set([selector]);
+    for (const candidate of fallbackCandidates) {
+      if (!candidate.selector || seenSelectors.has(candidate.selector)) {
+        continue;
+      }
+      seenSelectors.add(candidate.selector);
+
+      try {
+        await this.clickSelector(candidate.selector, pointerMotion);
+        return;
+      } catch (error) {
+        recordFailure(`${candidate.reason}:${candidate.selector}`, error);
+      }
+    }
+
+    for (const text of this.getTextClickFallbacks(
+      elementText,
+      fallbackCandidates,
+    )) {
+      for (const exact of [true, false]) {
+        try {
+          await this.clickByText({ text, exact });
+          return;
+        } catch (error) {
+          recordFailure(`text:${exact ? "exact" : "contains"}:${text}`, error);
+        }
+      }
+    }
+
+    const href = fallbackCandidates.find(
+      (candidate) => candidate.href && isConnectableUrl(candidate.href),
+    )?.href;
+    if (followHref && href) {
+      await this.navigate(href);
+      return;
+    }
+
+    throw new Error(
+      [
+        `Unable to click ref "${ref}".`,
+        failures.length > 0
+          ? `Fallback attempts failed: ${failures.slice(0, 8).join(" | ")}`
+          : "No fallback click targets were available.",
+      ].join(" "),
+    );
+  }
+
+  private async clickSelector(
+    selector: string,
+    pointerMotion: PointerMotionPreference,
+  ): Promise<void> {
     await sendTabMessage(this.record.tabId, {
       type: "scrollIntoView",
       payload: { selector },
@@ -244,13 +391,35 @@ export class SessionController {
         payload: { selector, options: { clickable: true } },
       },
     );
-    const pointerMotion = await this.getPointerMotionOptions();
 
     const navigated = await withPossibleNavigation(this.record.tabId, async () =>
       clickPoint(this.record.tabId, coordinates, pointerMotion),
     );
 
     await this.afterInteraction(navigated);
+  }
+
+  private getTextClickFallbacks(
+    elementText: string,
+    candidates: ClickFallbackCandidate[],
+  ): string[] {
+    const values = [
+      elementText,
+      ...candidates.flatMap((candidate) => [candidate.name, candidate.text]),
+    ];
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+
+    for (const value of values) {
+      const candidate = String(value ?? "").replace(/\s+/g, " ").trim();
+      if (!candidate || candidate.length > 300 || seen.has(candidate)) {
+        continue;
+      }
+      seen.add(candidate);
+      normalized.push(candidate);
+    }
+
+    return normalized.slice(0, 6);
   }
 
   private async drag(startRef: string, endRef: string): Promise<void> {
@@ -377,6 +546,47 @@ export class SessionController {
       },
     });
     await this.waitForStableDom();
+  }
+
+  private async setInputByLabel(payload: any): Promise<void> {
+    await ensureContentScript(this.record.tabId);
+    await sendTabMessage(this.record.tabId, {
+      type: "setInputByLabel",
+      payload: {
+        label: String(payload?.label ?? ""),
+        value: String(payload?.value ?? ""),
+        exact: Boolean(payload?.exact),
+      },
+    });
+    await this.waitForStableDom();
+  }
+
+  private async selectOptionByLabel(payload: any): Promise<void> {
+    await ensureContentScript(this.record.tabId);
+    await sendTabMessage(this.record.tabId, {
+      type: "selectOptionByLabel",
+      payload: {
+        label: String(payload?.label ?? ""),
+        option: String(payload?.option ?? ""),
+        exact: Boolean(payload?.exact),
+      },
+    });
+    await this.waitForStableDom();
+  }
+
+  private async clickByText(payload: any): Promise<void> {
+    await ensureContentScript(this.record.tabId);
+    const navigated = await withPossibleNavigation(this.record.tabId, async () => {
+      await sendTabMessage(this.record.tabId, {
+        type: "clickByText",
+        payload: {
+          text: String(payload?.text ?? ""),
+          role: typeof payload?.role === "string" ? payload.role : undefined,
+          exact: Boolean(payload?.exact),
+        },
+      });
+    });
+    await this.afterInteraction(navigated);
   }
 
   private async pressKey(key: string): Promise<void> {

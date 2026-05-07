@@ -15,6 +15,17 @@ export type CreatedSession = {
   status?: string;
 };
 
+export type BrowserTabInfo = {
+  tabId: number;
+  windowId: number;
+  title: string;
+  url: string;
+  active: boolean;
+  sessionId?: string;
+  sessionStatus?: string;
+  label?: string;
+};
+
 export type ExtensionReloadResult = {
   reloading: true;
 };
@@ -30,6 +41,11 @@ export type ExtensionConnectionMetadata = {
   transportMode: string | null;
 };
 
+export type ExtensionConnectionExpectations = {
+  expectedBuildSourceRoot?: string | null;
+  expectedBuiltAt?: string | null;
+};
+
 export type ExtensionStatus = ExtensionConnectionMetadata & {
   connected: boolean;
   lastConnectedAt: string | null;
@@ -41,7 +57,9 @@ export type ExtensionStatus = ExtensionConnectionMetadata & {
   serverMetadata?: {
     serverVersion: string;
     serverCwd: string;
+    serverRoot?: string;
     expectedExtensionRoot: string | null;
+    expectedExtensionBuiltAt?: string | null;
     wsPortCandidates: number[];
     brokerPortCandidates: number[];
     serverPid: number;
@@ -101,6 +119,51 @@ function normalizeMetadata(
   };
 }
 
+function normalizePath(value: string | null | undefined): string | null {
+  return value ? value.replace(/\\/g, "/").replace(/\/+$/, "") : null;
+}
+
+function metadataPreferenceScore(
+  metadata: ExtensionConnectionMetadata,
+  expectations?: ExtensionConnectionExpectations,
+): number {
+  let score = 0;
+  const expectedRoot = normalizePath(expectations?.expectedBuildSourceRoot);
+  const actualRoot = normalizePath(metadata.buildSourceRoot);
+  if (expectedRoot && actualRoot === expectedRoot) {
+    score += 4;
+  } else if (expectedRoot && actualRoot) {
+    score -= 4;
+  }
+
+  if (expectations?.expectedBuiltAt && metadata.builtAt === expectations.expectedBuiltAt) {
+    score += 6;
+  } else if (expectations?.expectedBuiltAt && metadata.builtAt) {
+    score -= 2;
+  }
+
+  if (metadata.transportMode === "direct-background-websocket") {
+    score += 1;
+  }
+
+  return score;
+}
+
+function shouldKeepCurrentControlConnection(
+  current: ExtensionConnectionMetadata,
+  next: ExtensionConnectionMetadata,
+  expectations?: ExtensionConnectionExpectations,
+): boolean {
+  if (!expectations) {
+    return false;
+  }
+
+  return (
+    metadataPreferenceScore(current, expectations) >
+    metadataPreferenceScore(next, expectations)
+  );
+}
+
 export class ExtensionControl {
   private ws?: WebSocket;
   private readonly connectionWaiters = new Set<ConnectionWaiter>();
@@ -110,13 +173,23 @@ export class ExtensionControl {
   attachConnection(
     ws: WebSocket,
     metadata?: Partial<ExtensionConnectionMetadata>,
+    expectations?: ExtensionConnectionExpectations,
   ): void {
     const previousWs = this.ws;
-    this.ws = ws;
-    this.metadata = normalizeMetadata({
+    const nextMetadata = normalizeMetadata({
       ...this.metadata,
       ...metadata,
     });
+    if (
+      isOpen(previousWs) &&
+      shouldKeepCurrentControlConnection(this.metadata, nextMetadata, expectations)
+    ) {
+      ws.close(4003, "non-preferred-control-connection");
+      return;
+    }
+
+    this.ws = ws;
+    this.metadata = nextMetadata;
     this.lastConnectedAt = new Date().toISOString();
 
     if (previousWs && previousWs !== ws) {
@@ -233,6 +306,37 @@ export class ExtensionControl {
       ws,
       "extension_prune_sessions",
       undefined,
+      { timeoutMs: options.responseTimeoutMs ?? 30_000 },
+    );
+  }
+
+  async listTabs(
+    options: {
+      connectionTimeoutMs?: number;
+      responseTimeoutMs?: number;
+    } = {},
+  ): Promise<BrowserTabInfo[]> {
+    const ws = await this.waitForConnection(options.connectionTimeoutMs);
+    return await sendSocketMessage<BrowserTabInfo[]>(
+      ws,
+      "extension_list_tabs",
+      undefined,
+      { timeoutMs: options.responseTimeoutMs ?? 30_000 },
+    );
+  }
+
+  async connectTab(
+    payload: { tabId: number; label?: string },
+    options: {
+      connectionTimeoutMs?: number;
+      responseTimeoutMs?: number;
+    } = {},
+  ): Promise<CreatedSession> {
+    const ws = await this.waitForConnection(options.connectionTimeoutMs);
+    return await sendSocketMessage<CreatedSession>(
+      ws,
+      "extension_connect_tab",
+      payload,
       { timeoutMs: options.responseTimeoutMs ?? 30_000 },
     );
   }

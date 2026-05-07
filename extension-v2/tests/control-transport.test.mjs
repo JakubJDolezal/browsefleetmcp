@@ -211,6 +211,140 @@ test("ExtensionControlTransport forwards reload commands to the background bridg
   await transport.close();
 });
 
+test("ExtensionControlTransport forwards tab listing and connect commands", async () => {
+  const MockWebSocket = createMockWebSocketClass();
+  const backgroundRequests = [];
+  const transport = new ExtensionControlTransport({
+    async requestBackground(message) {
+      backgroundRequests.push(message);
+      switch (message.type) {
+        case "background/get-connection-settings":
+          return createConnectionSettings();
+        case "background/list-tabs":
+          return [
+            {
+              tabId: 9,
+              windowId: 3,
+              title: "Example",
+              url: "https://example.com",
+              active: false,
+            },
+          ];
+        case "background/connect-tab":
+          return {
+            sessionId: "tab-session",
+            tabId: message.payload.tabId,
+            windowId: 3,
+            title: "Example",
+            url: "https://example.com",
+            status: "connected",
+          };
+        default:
+          throw new Error(`Unexpected background message ${message.type}`);
+      }
+    },
+    webSocketClass: MockWebSocket,
+  });
+
+  await transport.connect();
+
+  MockWebSocket.instances[0].dispatch("message", {
+    data: JSON.stringify({
+      id: "request-list-tabs",
+      type: "extension_list_tabs",
+    }),
+  });
+  MockWebSocket.instances[0].dispatch("message", {
+    data: JSON.stringify({
+      id: "request-connect-tab",
+      type: "extension_connect_tab",
+      payload: { tabId: 9, label: "Supplier" },
+    }),
+  });
+
+  await waitFor(
+    async () => (MockWebSocket.instances[0].sent.length >= 2 ? true : undefined),
+    "extension tab responses",
+  );
+
+  const listResponse = JSON.parse(MockWebSocket.instances[0].sent[0]);
+  const connectResponse = JSON.parse(MockWebSocket.instances[0].sent[1]);
+  assert.equal(listResponse.payload.requestId, "request-list-tabs");
+  assert.equal(listResponse.payload.result[0].tabId, 9);
+  assert.equal(connectResponse.payload.requestId, "request-connect-tab");
+  assert.equal(connectResponse.payload.result.sessionId, "tab-session");
+  assert.ok(backgroundRequests.some((message) => message.type === "background/list-tabs"));
+  assert.ok(
+    backgroundRequests.some(
+      (message) =>
+        message.type === "background/connect-tab" &&
+        message.payload.tabId === 9 &&
+        message.payload.label === "Supplier",
+    ),
+  );
+
+  await transport.close();
+});
+
+test("ExtensionControlTransport forwards create-session labels", async () => {
+  const MockWebSocket = createMockWebSocketClass();
+  const backgroundRequests = [];
+  const transport = new ExtensionControlTransport({
+    async requestBackground(message) {
+      backgroundRequests.push(message);
+      switch (message.type) {
+        case "background/get-connection-settings":
+          return createConnectionSettings();
+        case "background/create-session":
+          return {
+            sessionId: "labeled-session",
+            tabId: 10,
+            windowId: 4,
+            title: "Labeled",
+            url: message.payload.url,
+            label: message.payload.label,
+            status: "connected",
+          };
+        default:
+          throw new Error(`Unexpected background message ${message.type}`);
+      }
+    },
+    webSocketClass: MockWebSocket,
+  });
+
+  await transport.connect();
+
+  MockWebSocket.instances[0].dispatch("message", {
+    data: JSON.stringify({
+      id: "request-create-session",
+      type: "extension_create_session",
+      payload: {
+        url: "https://example.com",
+        label: "Procurement",
+      },
+    }),
+  });
+
+  await waitFor(
+    async () => (MockWebSocket.instances[0].sent.length >= 1 ? true : undefined),
+    "extension create-session response",
+  );
+
+  const createResponse = JSON.parse(MockWebSocket.instances[0].sent[0]);
+  assert.equal(createResponse.payload.requestId, "request-create-session");
+  assert.equal(createResponse.payload.result.label, "Procurement");
+  assert.ok(
+    backgroundRequests.some(
+      (message) =>
+        message.type === "background/create-session" &&
+        message.payload.url === "https://example.com" &&
+        message.payload.label === "Procurement",
+    ),
+  );
+
+  await transport.close();
+});
+
 test("ExtensionControlTransport forwards unsolicited server metadata to the background bridge", async () => {
   const MockWebSocket = createMockWebSocketClass();
   const backgroundRequests = [];

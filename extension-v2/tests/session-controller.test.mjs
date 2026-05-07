@@ -218,6 +218,230 @@ test("SessionController runs focus-sensitive keyboard input through the focus lo
   );
 });
 
+test("SessionController falls back to an ancestor click target when the ref is obstructed", async () => {
+  const navigationListeners = new Set();
+  const debuggerCommands = [];
+  const contentMessages = [];
+
+  globalThis.chrome = {
+    debugger: {
+      async attach() {
+        return null;
+      },
+      async detach() {
+        return null;
+      },
+      async sendCommand(_target, command, params) {
+        debuggerCommands.push({ command, params });
+        if (command === "Page.getLayoutMetrics") {
+          return {
+            cssVisualViewport: {
+              zoom: 1,
+              clientWidth: 800,
+              clientHeight: 600,
+            },
+          };
+        }
+        return {};
+      },
+    },
+    tabs: {
+      async sendMessage(_tabId, message) {
+        contentMessages.push(message);
+        switch (message.type) {
+          case "ping":
+          case "scrollIntoView":
+          case "waitForStableDOM":
+            return null;
+          case "getSelectorForAriaRef":
+            return "#product-title";
+          case "getElementCoordinates":
+            if (message.payload.selector === "#product-title") {
+              throw new Error("Element is not clickable at any visible point");
+            }
+            assert.equal(message.payload.selector, "#product-link");
+            return { x: 30, y: 40 };
+          case "getClickFallbackCandidates":
+            return [
+              {
+                selector: "#product-link",
+                reason: "ancestor",
+                text: "Product title",
+                name: "Product title",
+                href: "https://supplier.test/product",
+              },
+            ];
+          default:
+            throw new Error(`Unexpected message type ${message.type}`);
+        }
+      },
+    },
+    scripting: {
+      async executeScript() {
+        return null;
+      },
+    },
+    webNavigation: {
+      onBeforeNavigate: {
+        addListener(listener) {
+          navigationListeners.add(listener);
+        },
+        removeListener(listener) {
+          navigationListeners.delete(listener);
+        },
+      },
+    },
+  };
+
+  const controller = new SessionController({
+    record: createBaseRecord(),
+    getConnectionSettings: async () => createConnectionSettings(),
+    onUpdate() {},
+    onDisposed() {},
+  });
+
+  await controller.routeSocketRequest("browser_click", {
+    ref: "title-ref",
+    element: "Product title",
+  });
+
+  assert.ok(
+    contentMessages.some(
+      ({ type, payload }) =>
+        type === "scrollIntoView" && payload?.selector === "#product-title",
+    ),
+  );
+  assert.ok(
+    contentMessages.some(
+      ({ type, payload }) =>
+        type === "scrollIntoView" && payload?.selector === "#product-link",
+    ),
+  );
+  assert.ok(
+    debuggerCommands.some(
+      ({ command, params }) =>
+        command === "Input.dispatchMouseEvent" &&
+        params?.type === "mousePressed" &&
+        params?.x === 30 &&
+        params?.y === 40,
+    ),
+  );
+});
+
+test("SessionController can navigate to the resolved href after click fallbacks fail", async () => {
+  const navigationListeners = new Set();
+  const contentMessages = [];
+  const tabState = {
+    id: 1,
+    windowId: 4,
+    title: "Before",
+    url: "https://before.test",
+    status: "complete",
+  };
+
+  globalThis.chrome = {
+    debugger: {
+      async attach() {
+        return null;
+      },
+      async detach() {
+        return null;
+      },
+      async sendCommand(_target, command) {
+        if (command === "Page.getLayoutMetrics") {
+          return {
+            cssVisualViewport: {
+              zoom: 1,
+              clientWidth: 800,
+              clientHeight: 600,
+            },
+          };
+        }
+        return {};
+      },
+    },
+    tabs: {
+      async get() {
+        return { ...tabState };
+      },
+      async update(_tabId, patch) {
+        tabState.url = patch.url;
+        tabState.title = "After";
+        tabState.status = "complete";
+        return { ...tabState };
+      },
+      async sendMessage(_tabId, message) {
+        contentMessages.push(message);
+        switch (message.type) {
+          case "ping":
+          case "scrollIntoView":
+          case "waitForStableDOM":
+            return null;
+          case "getSelectorForAriaRef":
+            return "#product-title";
+          case "getElementCoordinates":
+            throw new Error("Element is not clickable at any visible point");
+          case "getClickFallbackCandidates":
+            return [
+              {
+                selector: "#product-link",
+                reason: "ancestor",
+                text: "Product title",
+                name: "Product title",
+                href: "https://supplier.test/product",
+              },
+            ];
+          case "clickByText":
+            throw new Error("No clickable element found for text");
+          default:
+            throw new Error(`Unexpected message type ${message.type}`);
+        }
+      },
+      onUpdated: {
+        addListener(listener) {
+          navigationListeners.add(listener);
+        },
+        removeListener(listener) {
+          navigationListeners.delete(listener);
+        },
+      },
+    },
+    scripting: {
+      async executeScript() {
+        return null;
+      },
+    },
+    webNavigation: {
+      onBeforeNavigate: {
+        addListener(listener) {
+          navigationListeners.add(listener);
+        },
+        removeListener(listener) {
+          navigationListeners.delete(listener);
+        },
+      },
+    },
+  };
+
+  const controller = new SessionController({
+    record: createBaseRecord(),
+    getConnectionSettings: async () => createConnectionSettings(),
+    onUpdate() {},
+    onDisposed() {},
+  });
+
+  await controller.routeSocketRequest("browser_click", {
+    ref: "title-ref",
+    element: "Product title",
+    followHref: true,
+  });
+
+  assert.equal(controller.recordSnapshot.url, "https://supplier.test/product");
+  assert.ok(
+    contentMessages.some(({ type }) => type === "clickByText"),
+  );
+});
+
 test("SessionController types through keyboard events for special inputs", async () => {
   const debuggerCommands = [];
   const contentMessages = [];

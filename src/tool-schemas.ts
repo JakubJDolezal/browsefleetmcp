@@ -54,6 +54,38 @@ export const SnapshotTool = z.object({
   arguments: emptyArguments,
 });
 
+export const PageSnapshotTool = z.object({
+  name: z.literal("browser_page_snapshot"),
+  description: z.literal(
+    "Capture a structured page snapshot with URL, title, visible text, forms, stable element refs, and a screenshot.",
+  ),
+  arguments: emptyArguments,
+});
+
+export const ProductCardsTool = z.object({
+  name: z.literal("browser_extract_product_cards"),
+  description: z.literal(
+    "Extract likely product/listing cards from the current supplier or ecommerce page as compact structured JSON with titles, links, article/SKU hints, prices, actions, and stable refs.",
+  ),
+  arguments: z.object({
+    query: z.string().optional(),
+    maxCards: z.number().int().min(1).max(50).optional().default(20),
+  }).strict(),
+});
+
+export const FindElementTool = z.object({
+  name: z.literal("browser_find_element"),
+  description: z.literal(
+    'Find visible elements by accessible label, visible text, and optional role. Example: find an input labeled "Subdomain".',
+  ),
+  arguments: z.object({
+    label: z.string().optional(),
+    text: z.string().optional(),
+    role: z.string().optional(),
+    exact: z.boolean().optional().default(false),
+  }),
+});
+
 export const ClickTool = z.object({
   name: z.literal("browser_click"),
   description: z.literal(
@@ -65,6 +97,7 @@ export const ClickTool = z.object({
   arguments: z.object({
     element: z.string(),
     ref: z.string(),
+    followHref: z.boolean().optional().default(true),
   }),
 });
 
@@ -126,6 +159,42 @@ export const SelectOptionTool = z.object({
     element: z.string(),
     ref: z.string(),
     values: z.array(z.string()),
+  }),
+});
+
+export const SetInputByLabelTool = z.object({
+  name: z.literal("browser_set_input_by_label"),
+  description: z.literal(
+    "Set an input or textarea value by matching its visible label, aria-label, labelled-by text, placeholder, or nearby form text. Does not require browser focus.",
+  ),
+  arguments: z.object({
+    label: z.string(),
+    value: z.string(),
+    exact: z.boolean().optional().default(false),
+  }),
+});
+
+export const SelectOptionByLabelTool = z.object({
+  name: z.literal("browser_select_option_by_label"),
+  description: z.literal(
+    "Choose an option in a dropdown by matching the select label and option text/value. Does not require browser focus.",
+  ),
+  arguments: z.object({
+    label: z.string(),
+    option: z.string(),
+    exact: z.boolean().optional().default(false),
+  }),
+});
+
+export const ClickByTextTool = z.object({
+  name: z.literal("browser_click_by_text"),
+  description: z.literal(
+    "Click a visible button, link, or clickable control by text or accessible name. Does not require browser focus.",
+  ),
+  arguments: z.object({
+    text: z.string(),
+    role: z.string().optional(),
+    exact: z.boolean().optional().default(false),
   }),
 });
 

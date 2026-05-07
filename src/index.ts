@@ -36,11 +36,17 @@ const snapshotTools: Tool[] = [
   common.goBack(true),
   common.goForward(true),
   snapshot.snapshot,
+  snapshot.pageSnapshot,
+  snapshot.productCards,
+  snapshot.findElement,
   snapshot.click,
   snapshot.drag,
   snapshot.hover,
   snapshot.type,
   snapshot.selectOption,
+  snapshot.setInputByLabel,
+  snapshot.selectOptionByLabel,
+  snapshot.clickByText,
   ...commonTools,
   ...customTools,
 ];
@@ -132,10 +138,16 @@ async function runCreateSessionCommand(
   }
 
   try {
-    const createdSession = await brokerClient.createSession(
-      options.url,
-      options.label,
-    );
+    const result = await brokerClient.callTool("browser_create_session", {
+      url: options.url,
+      label: options.label,
+    });
+    const text = getToolText(result);
+    if (result.isError) {
+      throw new Error(text);
+    }
+    const payload = JSON.parse(text);
+    const createdSession = payload.created ?? payload;
     process.stdout.write(`${JSON.stringify(createdSession, null, 2)}\n`);
   } finally {
     await brokerClient.close().catch(() => undefined);

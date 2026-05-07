@@ -5,9 +5,17 @@ import {
 } from "../shared/protocol.js";
 import {
   generateAriaSnapshot,
+  clickByText,
+  extractProductCards,
+  findElementsByQuery,
+  getClickFallbackCandidates,
+  generatePageSnapshot,
   getSelectorForAriaRef,
   querySelectorDeep,
+  selectOptionByLabel,
+  setInputByLabel,
 } from "./snapshot.js";
+import { findClickablePoint } from "./hit-testing.js";
 
 const consoleEntries: ConsoleEntry[] = [];
 const MAX_CONSOLE_ENTRIES = 100;
@@ -75,14 +83,6 @@ function getElementOrThrow(selector: string): HTMLElement {
   return element;
 }
 
-function isClickableAtCenter(element: HTMLElement): boolean {
-  const rect = element.getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
-  const hitElement = document.elementFromPoint(x, y);
-  return !!hitElement && (hitElement === element || element.contains(hitElement));
-}
-
 function getElementCenter(selector: string, clickable = false): {
   x: number;
   y: number;
@@ -93,8 +93,32 @@ function getElementCenter(selector: string, clickable = false): {
     throw new Error(`Element has no visible box: ${selector}`);
   }
 
-  if (clickable && !isClickableAtCenter(element)) {
-    throw new Error(`Element is not clickable at its center point: ${selector}`);
+  if (clickable) {
+    const clickablePoint = findClickablePoint({
+      rects: Array.from(element.getClientRects()).map((candidate) => ({
+        left: candidate.left,
+        top: candidate.top,
+        width: candidate.width,
+        height: candidate.height,
+      })),
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      },
+      hitTest: ({ x, y }) => {
+        const hitElement = document.elementFromPoint(x, y);
+        return (
+          !!hitElement &&
+          (hitElement === element || element.contains(hitElement))
+        );
+      },
+    });
+
+    if (!clickablePoint) {
+      throw new Error(`Element is not clickable at any visible point: ${selector}`);
+    }
+
+    return clickablePoint;
   }
 
   return {
@@ -149,6 +173,12 @@ async function handleContentRequest(message: ContentRequest): Promise<unknown> {
       return true;
     case "generateAriaSnapshot":
       return generateAriaSnapshot();
+    case "generatePageSnapshot":
+      return generatePageSnapshot();
+    case "extractProductCards":
+      return extractProductCards(message.payload);
+    case "findElement":
+      return findElementsByQuery(message.payload);
     case "getSelectorForAriaRef":
       return getSelectorForAriaRef(message.payload.ariaRef);
     case "scrollIntoView":
@@ -159,6 +189,8 @@ async function handleContentRequest(message: ContentRequest): Promise<unknown> {
       });
       await nextFrame();
       return null;
+    case "getClickFallbackCandidates":
+      return getClickFallbackCandidates(message.payload);
     case "getElementCoordinates":
       return getElementCenter(
         message.payload.selector,
@@ -240,6 +272,15 @@ async function handleContentRequest(message: ContentRequest): Promise<unknown> {
       element.dispatchEvent(new Event("change", { bubbles: true }));
       return null;
     }
+    case "setInputByLabel":
+      setInputByLabel(message.payload);
+      return null;
+    case "selectOptionByLabel":
+      selectOptionByLabel(message.payload);
+      return null;
+    case "clickByText":
+      clickByText(message.payload);
+      return null;
     case "getConsoleLogs":
       return [...consoleEntries];
   }
