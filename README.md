@@ -107,7 +107,7 @@ Or for the local checkout:
 }
 ```
 
-Specific client configs live in [`examples/`](./examples), and the full setup docs are at https://jakubjdolezal.github.io/browsefleetmcp/clients.html
+Specific client configs live in [`examples/`](./examples). For a single copy-by-target setup page, use https://jakubjdolezal.github.io/browsefleetmcp/setup.html; the reference client config page is at https://jakubjdolezal.github.io/browsefleetmcp/clients.html
 
 ### 4. Connect a tab or create one
 

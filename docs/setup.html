@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BrowseFleetMCP One-Page Setup</title>
+    <meta
+      name="description"
+      content="One-page BrowseFleetMCP setup recipes for Codex, Claude Code, Claude Desktop, Cursor, generic MCP clients, and the optional Codex skill."
+    />
+    <meta name="theme-color" content="#081018" />
+    <link rel="canonical" href="https://jakubjdolezal.github.io/browsefleetmcp/setup.html" />
+    <meta property="og:title" content="BrowseFleetMCP One-Page Setup" />
+    <meta
+      property="og:description"
+      content="Copy the right BrowseFleetMCP install commands for Codex, Claude Code, Claude Desktop, Cursor, and generic MCP clients."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:url"
+      content="https://jakubjdolezal.github.io/browsefleetmcp/setup.html"
+    />
+    <meta
+      property="og:image"
+      content="https://jakubjdolezal.github.io/browsefleetmcp/assets/social-card.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BrowseFleetMCP One-Page Setup" />
+    <meta
+      name="twitter:description"
+      content="One page of copy-ready setup recipes for common MCP hosts."
+    />
+    <meta
+      name="twitter:image"
+      content="https://jakubjdolezal.github.io/browsefleetmcp/assets/social-card.png"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" type="image/svg+xml" href="./assets/fleet-mark.svg" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Space Grotesk", "Avenir Next", "Segoe UI", "sans-serif"],
+              mono: ["IBM Plex Mono", "SFMono-Regular", "monospace"],
+            },
+            colors: {
+              fleet: {
+                bg: "#081018",
+                mist: "#e7e9e4",
+                sand: "#efe3ce",
+                cyan: "#42c5c0",
+                ember: "#db7440",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="antialiased">
+    <div class="relative overflow-hidden">
+      <header class="sticky top-0 z-30 border-b border-white/10 bg-[#081018]/70 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <a href="./index.html" class="brand-link text-white no-underline">
+            <img
+              src="./assets/browsefleet-logo.svg"
+              alt="BrowseFleetMCP"
+              class="brand-logo"
+            />
+            <span class="soft-label hidden lg:inline-block">Real Chrome, local control</span>
+          </a>
+          <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
+            <a data-nav-link class="nav-link" href="./index.html">Overview</a>
+            <a data-nav-link class="nav-link" href="./install.html">Install</a>
+            <a data-nav-link class="nav-link" href="./setup.html">Setup</a>
+            <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
+            <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
+            <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
+            <a data-nav-link class="nav-link" href="./skill.html">Skill</a>
+            <a class="nav-link" href="https://github.com/JakubJDolezal/browsefleetmcp">GitHub</a>
+          </nav>
+        </div>
+      </header>
+
+      <main class="pb-14">
+        <section data-reveal class="py-12 sm:py-16">
+          <div class="mx-auto grid max-w-7xl gap-8 px-6 lg:grid-cols-[minmax(0,1.08fr)_25rem] lg:items-end">
+            <div class="surface-panel p-8 sm:p-10">
+              <p class="breadcrumbs"><a href="./index.html">Home</a> / Setup</p>
+              <p class="eyebrow">One-page setup</p>
+              <h1 class="max-w-4xl text-5xl font-bold leading-none tracking-[-0.07em] text-white sm:text-6xl">
+                Copy the install path for the MCP host you use.
+              </h1>
+              <p class="mt-6 max-w-3xl text-lg leading-8 text-white/70">
+                Every route has the same browser prerequisite: load the Chrome extension
+                from this repo, then point your client at the local stdio server. Use
+                the published package for normal use or the local checkout while developing.
+              </p>
+            </div>
+
+            <aside class="dark-panel p-6 sm:p-8">
+              <p class="soft-label">Setup order</p>
+              <ol class="mt-5 list-decimal space-y-4 pl-5 text-sm leading-7 text-white/72">
+                <li>Build and load <code>extension-v2/</code> in Chrome.</li>
+                <li>Choose published package or local checkout.</li>
+                <li>Copy the recipe for Codex, Claude Code, Claude Desktop, or another host.</li>
+                <li>Connect a tab from the extension popup before using browser tools.</li>
+              </ol>
+            </aside>
+          </div>
+        </section>
+
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+            <div class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Required once</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Build and load the Chrome extension.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-white/66">
+                The npm package installs the server only. The browser side still comes from
+                this repo checkout. After running the commands, open
+                <code>chrome://extensions</code>, enable Developer mode, click
+                <code>Load unpacked</code>, and select <code>extension-v2/</code>.
+              </p>
+            </div>
+            <div class="code-window">
+              <button class="copy-button" data-copy-target="setup-extension">Copy</button>
+              <pre id="setup-extension"><code>git clone https://github.com/JakubJDolezal/browsefleetmcp.git
+cd browsefleetmcp/extension-v2
+npm install
+npm run build</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-6 sm:py-8">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-2">
+            <article class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Server choice</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Published package.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-white/66">
+                Use this when you want the npm release and do not need local source edits.
+              </p>
+              <div class="mt-6 code-window">
+                <button class="copy-button" data-copy-target="setup-published">Copy</button>
+                <pre id="setup-published"><code>npx -y browsefleetmcp --help</code></pre>
+              </div>
+            </article>
+
+            <article class="surface-panel p-7 sm:p-8">
+              <p class="eyebrow">Server choice</p>
+              <h2 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                Local checkout.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-white/66">
+                Use this when your MCP client should run the build from this repo.
+              </p>
+              <div class="mt-6 code-window">
+                <button class="copy-button" data-copy-target="setup-local">Copy</button>
+                <pre id="setup-local"><code>cd /absolute/path/to/browsefleetmcp
+npm install
+npm run build
+node /absolute/path/to/browsefleetmcp/dist/index.js --help</code></pre>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section data-reveal class="py-8 sm:py-10">
+          <div class="mx-auto max-w-7xl px-6">
+            <p class="eyebrow">Copy by target</p>
+            <h2 class="max-w-4xl text-4xl font-bold leading-none tracking-[-0.06em] text-white sm:text-5xl">
+              Pick the block for the thing you are installing into.
+            </h2>
+            <div class="mt-8 grid gap-6">
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+                <div>
+                  <p class="eyebrow">Codex</p>
+                  <h3 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    User-level MCP server.
+                  </h3>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    The first block uses the published package. The second points Codex at
+                    your local build. If <code>browsefleet</code> already exists, remove or
+                    edit that entry before adding it again.
+                  </p>
+                </div>
+                <div class="grid gap-6">
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="setup-codex-published">Copy</button>
+                    <pre id="setup-codex-published"><code>codex mcp add browsefleet -- npx -y browsefleetmcp
+codex mcp get browsefleet
+codex mcp list</code></pre>
+                  </div>
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="setup-codex-local">Copy</button>
+                    <pre id="setup-codex-local"><code>cd /absolute/path/to/browsefleetmcp
+npm install
+npm run build
+codex mcp add browsefleet -- node /absolute/path/to/browsefleetmcp/dist/index.js
+codex mcp get browsefleet</code></pre>
+                  </div>
+                </div>
+              </article>
+
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+                <div>
+                  <p class="eyebrow">Claude Code</p>
+                  <h3 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    User or project-scoped MCP server.
+                  </h3>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    Use user scope for your machine. Use project scope when the config should
+                    live with a repo. If the server name already exists, remove or update the
+                    old entry before re-adding it.
+                  </p>
+                </div>
+                <div class="grid gap-6">
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="setup-claude-user">Copy</button>
+                    <pre id="setup-claude-user"><code>claude mcp add --transport stdio browsefleet -- npx -y browsefleetmcp
+claude mcp list</code></pre>
+                  </div>
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="setup-claude-project">Copy</button>
+                    <pre id="setup-claude-project"><code>claude mcp add --transport stdio --scope project browsefleet -- npx -y browsefleetmcp
+claude mcp list</code></pre>
+                  </div>
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="setup-claude-local">Copy</button>
+                    <pre id="setup-claude-local"><code>cd /absolute/path/to/browsefleetmcp
+npm install
+npm run build
+claude mcp add --transport stdio browsefleet -- node /absolute/path/to/browsefleetmcp/dist/index.js</code></pre>
+                  </div>
+                </div>
+              </article>
+
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+                <div>
+                  <p class="eyebrow">Claude Desktop</p>
+                  <h3 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    Package an MCPB bundle.
+                  </h3>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    Build the root package, pack the bundle, then install the generated
+                    <code>.mcpb</code> file from Claude Desktop Settings.
+                  </p>
+                </div>
+                <div class="code-window">
+                  <button class="copy-button" data-copy-target="setup-claude-desktop">Copy</button>
+                  <pre id="setup-claude-desktop"><code>npm install -g @anthropic-ai/mcpb
+cd /absolute/path/to/browsefleetmcp
+npm install
+npm run build
+mcpb pack</code></pre>
+                </div>
+              </article>
+
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+                <div>
+                  <p class="eyebrow">Cursor or generic MCP host</p>
+                  <h3 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    Paste the stdio launcher shape.
+                  </h3>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    Cursor uses <code>~/.cursor/mcp.json</code>. Other stdio MCP hosts need
+                    the same command and args shape.
+                  </p>
+                </div>
+                <div class="grid gap-6">
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="setup-cursor-config">Copy</button>
+                    <pre id="setup-cursor-config"><code>{
+  "mcpServers": {
+    "browsefleet": {
+      "command": "npx",
+      "args": ["-y", "browsefleetmcp"]
+    }
+  }
+}</code></pre>
+                  </div>
+                  <div class="code-window">
+                    <button class="copy-button" data-copy-target="setup-generic-windows">Copy</button>
+                    <pre id="setup-generic-windows"><code>{
+  "command": "cmd",
+  "args": ["/c", "npx", "-y", "browsefleetmcp"]
+}</code></pre>
+                  </div>
+                </div>
+              </article>
+
+              <article class="surface-panel grid gap-6 p-7 sm:p-8 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+                <div>
+                  <p class="eyebrow">Optional Codex skill</p>
+                  <h3 class="text-3xl font-bold leading-none tracking-[-0.05em] text-white">
+                    Teach Codex the BrowseFleet workflow.
+                  </h3>
+                  <p class="mt-5 text-base leading-8 text-white/66">
+                    This does not install the MCP server. It only gives Codex operating
+                    guidance after BrowseFleet is configured.
+                  </p>
+                </div>
+                <div class="code-window">
+                  <button class="copy-button" data-copy-target="setup-codex-skill">Copy</button>
+                  <pre id="setup-codex-skill"><code>mkdir -p ~/.codex/skills
+cp -R /absolute/path/to/browsefleetmcp/examples/skills/browsefleetmcp ~/.codex/skills/</code></pre>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section data-reveal class="py-8 sm:py-10">
+          <div class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div class="warm-panel p-7 sm:p-8">
+              <p class="eyebrow !text-[#8d4f2f]">First run</p>
+              <h2 class="text-4xl font-bold leading-none tracking-[-0.06em] sm:text-5xl">
+                A configured server still needs a connected browser tab.
+              </h2>
+              <p class="mt-5 text-base leading-8 text-black/68">
+                Open Chrome, use the BrowseFleetMCP extension popup to connect the current
+                tab, then run a health check or create a session. If tools fail with
+                <code>No connected tab</code>, the client is installed but the browser side is
+                not attached yet.
+              </p>
+            </div>
+            <div class="code-window">
+              <button class="copy-button" data-copy-target="setup-first-run">Copy</button>
+              <pre id="setup-first-run"><code>npx -y browsefleetmcp health
+npx -y browsefleetmcp create-session --url https://example.com --label "Smoke test"
+
+# local checkout variant
+node /absolute/path/to/browsefleetmcp/dist/index.js health</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <div data-reveal class="mx-auto grid max-w-7xl gap-4 px-6 pt-2 md:grid-cols-2">
+          <a class="pager-link" href="./install.html">Previous: install</a>
+          <a class="pager-link" href="./clients.html">Next: client configs</a>
+        </div>
+      </main>
+
+      <footer class="border-t border-white/10">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p class="footer-copy">
+            One extension, one local server, and copy-ready launchers for each MCP host.
+          </p>
+          <p class="soft-label">One-page setup</p>
+        </div>
+      </footer>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

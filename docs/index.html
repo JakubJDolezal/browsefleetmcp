@@ -84,6 +84,7 @@
           <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="Primary">
             <a data-nav-link class="nav-link" href="./index.html">Overview</a>
             <a data-nav-link class="nav-link" href="./install.html">Install</a>
+            <a data-nav-link class="nav-link" href="./setup.html">Setup</a>
             <a data-nav-link class="nav-link" href="./clients.html">Clients</a>
             <a data-nav-link class="nav-link" href="./cli.html">CLI</a>
             <a data-nav-link class="nav-link" href="./claude-desktop.html">Claude Desktop</a>
@@ -125,10 +126,10 @@
 
               <div class="mt-10 flex flex-wrap gap-4">
                 <a
-                  href="./install.html"
+                  href="./setup.html"
                   class="inline-flex items-center justify-center rounded-full bg-fleet-cyan px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-slate-950 no-underline transition hover:-translate-y-0.5 hover:bg-[#6ad7d2]"
                 >
-                  Start setup
+                  One-page setup
                 </a>
                 <a
                   href="./clients.html"
@@ -227,7 +228,7 @@
               </p>
             </div>
 
-            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               <a href="./install.html" class="route-link p-6 no-underline">
                 <p class="soft-label">Install</p>
                 <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
@@ -235,6 +236,16 @@
                 </h3>
                 <p class="mt-4 text-base leading-8 text-white/64">
                   The full local setup path, in order, with ports and auth token notes.
+                </p>
+              </a>
+
+              <a href="./setup.html" class="route-link p-6 no-underline">
+                <p class="soft-label">Setup</p>
+                <h3 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  Copy the exact install block for Codex, Claude Code, or another host.
+                </h3>
+                <p class="mt-4 text-base leading-8 text-white/64">
+                  One-page recipes that combine extension setup, server choice, and client wiring.
                 </p>
               </a>
 
@@ -387,10 +398,10 @@ browsefleetmcp --auth-token your-shared-token</code></pre>
 
                 <div class="flex flex-wrap gap-4">
                   <a
-                    href="./install.html"
+                    href="./setup.html"
                     class="inline-flex items-center justify-center rounded-full bg-[#11161c] px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white no-underline transition hover:-translate-y-0.5"
                   >
-                    Open install
+                    Open setup
                   </a>
                   <a
                     href="https://github.com/JakubJDolezal/browsefleetmcp/tree/main/examples"
